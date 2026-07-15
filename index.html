@@ -1,0 +1,817 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#4f46e5" />
+<title>Business Launchpad</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+<style>
+  :root {
+    --brand: #4f46e5;
+    --brand-dark: #4338ca;
+    --brand-light: #eef2ff;
+    --green: #059669;
+    --green-light: #ecfdf5;
+    --amber: #b45309;
+    --amber-light: #fffbeb;
+    --ink: #1e293b;
+    --ink-soft: #64748b;
+    --line: #e2e8f0;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.55;
+    min-height: 100vh;
+  }
+  #root { max-width: 520px; margin: 0 auto; padding: 0 16px 48px; }
+
+  .topbar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 18px 2px 14px;
+  }
+  .logo {
+    width: 34px; height: 34px; border-radius: 10px;
+    background: linear-gradient(135deg, #6366f1, #4338ca);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 18px; flex-shrink: 0;
+  }
+  .brandname { font-weight: 700; font-size: 17px; letter-spacing: -0.02em; }
+  .brandtag { font-size: 12px; color: var(--ink-soft); margin-top: -2px; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 22px 20px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+    margin-bottom: 16px;
+  }
+
+  h1 { font-size: 26px; letter-spacing: -0.03em; line-height: 1.2; margin-bottom: 10px; }
+  h2 { font-size: 20px; letter-spacing: -0.02em; line-height: 1.25; margin-bottom: 8px; }
+  p.sub { color: var(--ink-soft); font-size: 15px; }
+
+  .btn {
+    display: block; width: 100%;
+    padding: 15px 18px;
+    border-radius: 12px;
+    border: none;
+    font-size: 16px; font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    text-align: center;
+    text-decoration: none;
+    transition: background 0.15s, transform 0.05s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn:active { transform: scale(0.985); }
+  .btn-primary { background: var(--brand); color: #fff; }
+  .btn-primary:hover { background: var(--brand-dark); }
+  .btn-primary:disabled { background: #c7d2fe; cursor: not-allowed; }
+  .btn-secondary {
+    background: #fff; color: var(--ink);
+    border: 1.5px solid var(--line);
+  }
+  .btn-secondary:hover { border-color: #cbd5e1; background: #f8fafc; }
+  .btn-green { background: var(--green); color: #fff; }
+  .btn-green:hover { background: #047857; }
+  .btn + .btn { margin-top: 10px; }
+
+  label.field-label { display: block; font-weight: 600; font-size: 15px; margin-bottom: 6px; }
+  .field-help { font-size: 13px; color: var(--ink-soft); margin-bottom: 10px; }
+  textarea, select {
+    width: 100%;
+    padding: 13px 14px;
+    border: 1.5px solid var(--line);
+    border-radius: 12px;
+    font-size: 16px;
+    font-family: inherit;
+    color: var(--ink);
+    background: #fff;
+    outline: none;
+  }
+  textarea:focus, select:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12); }
+  textarea { resize: vertical; min-height: 88px; }
+  .field { margin-bottom: 20px; }
+  .soon-note { font-size: 12px; color: var(--ink-soft); margin-top: 6px; }
+
+  .choice {
+    display: block; width: 100%;
+    text-align: left;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    border: 1.5px solid var(--line);
+    border-radius: 12px;
+    background: #fff;
+    font-size: 15px; font-weight: 500;
+    font-family: inherit;
+    color: var(--ink);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .choice:hover { border-color: #cbd5e1; }
+  .choice.selected {
+    border-color: var(--brand);
+    background: var(--brand-light);
+    box-shadow: 0 0 0 1px var(--brand);
+  }
+
+  .progress-wrap { padding: 4px 2px 16px; }
+  .progress-label {
+    display: flex; justify-content: space-between;
+    font-size: 13px; font-weight: 600; color: var(--ink-soft);
+    margin-bottom: 7px;
+  }
+  .progress-track {
+    height: 8px; border-radius: 99px; background: #e2e8f0; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; border-radius: 99px;
+    background: linear-gradient(90deg, #6366f1, #4f46e5);
+    transition: width 0.4s ease;
+  }
+
+  .step-eyebrow {
+    display: inline-block;
+    font-size: 12px; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--brand);
+    background: var(--brand-light);
+    padding: 4px 10px; border-radius: 99px;
+    margin-bottom: 12px;
+  }
+  .meta-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 14px 0 4px; }
+  .meta-chip {
+    flex: 1 1 130px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 10px 12px;
+  }
+  .meta-chip .k { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft); }
+  .meta-chip .v { font-size: 14px; font-weight: 600; margin-top: 2px; }
+
+  .warning {
+    background: var(--amber-light);
+    border: 1px solid #fde68a;
+    color: var(--amber);
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 14px;
+    margin-top: 14px;
+  }
+  .tips { margin-top: 14px; }
+  .tips li, .doc-check li {
+    font-size: 14px; color: var(--ink-soft);
+    margin: 6px 0 6px 0; list-style: none;
+    padding-left: 22px; position: relative;
+  }
+  .tips li::before { content: "💡"; position: absolute; left: 0; font-size: 12px; top: 2px; }
+  .doc-check { margin-top: 12px; }
+  .doc-check li::before { content: "📄"; position: absolute; left: 0; font-size: 12px; top: 2px; }
+  .doc-check-title, .tips-title { font-size: 13px; font-weight: 700; margin-top: 14px; }
+
+  .step-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+  .navlink {
+    background: none; border: none; font-family: inherit;
+    color: var(--ink-soft); font-size: 14px; font-weight: 600;
+    cursor: pointer; padding: 8px 6px;
+  }
+  .navlink:disabled { opacity: 0.35; cursor: default; }
+  .navlink.fwd { color: var(--brand); }
+
+  .done-banner {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--green-light); color: var(--green);
+    border: 1px solid #a7f3d0;
+    border-radius: 12px; padding: 10px 14px;
+    font-weight: 600; font-size: 14px; margin-bottom: 14px;
+  }
+
+  .reco-type {
+    font-size: 24px; font-weight: 800; letter-spacing: -0.02em;
+    color: var(--brand); margin: 4px 0 10px;
+  }
+  .reco-note {
+    background: var(--bg); border: 1px solid var(--line);
+    border-radius: 12px; padding: 12px 14px;
+    font-size: 13.5px; color: var(--ink-soft); margin-top: 14px;
+  }
+
+  .summary-list { margin: 14px 0; }
+  .summary-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px 0; border-bottom: 1px solid var(--line);
+    font-size: 14.5px;
+  }
+  .summary-item:last-child { border-bottom: none; }
+  .summary-item .check { color: var(--green); font-weight: 700; flex-shrink: 0; }
+  .summary-item .cost { margin-left: auto; color: var(--ink-soft); font-weight: 600; white-space: nowrap; font-size: 13.5px; }
+
+  .total-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 14px 16px; border-radius: 12px;
+    background: var(--brand-light); border: 1px solid #c7d2fe;
+    font-weight: 700; margin-top: 6px;
+  }
+  .total-row .amt { font-size: 22px; color: var(--brand); }
+  .total-foot { font-size: 12.5px; color: var(--ink-soft); margin-top: 8px; }
+
+  .next-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .next-item:last-child { border-bottom: none; }
+  .next-item .ico {
+    width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+    background: var(--brand-light); display: flex; align-items: center; justify-content: center;
+    font-size: 17px;
+  }
+  .next-item .t { font-weight: 600; font-size: 14.5px; }
+  .next-item .d { font-size: 13px; color: var(--ink-soft); }
+
+  .quiz-dots { display: flex; gap: 6px; margin-bottom: 16px; }
+  .quiz-dots span { width: 8px; height: 8px; border-radius: 99px; background: var(--line); transition: background 0.2s; }
+  .quiz-dots span.on { background: var(--brand); }
+
+  .idea-banner {
+    font-size: 13px; color: var(--ink-soft);
+    background: #fff; border: 1px dashed var(--line);
+    border-radius: 12px; padding: 10px 14px; margin-bottom: 14px;
+  }
+  .idea-banner b { color: var(--ink); }
+
+  .hero-badges { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 20px; }
+  .hero-badge {
+    font-size: 12.5px; font-weight: 600; color: var(--ink-soft);
+    background: #fff; border: 1px solid var(--line);
+    padding: 6px 12px; border-radius: 99px;
+  }
+  .footer-note { text-align: center; font-size: 12px; color: #94a3b8; margin-top: 20px; padding: 0 10px; }
+  .reset-link { background: none; border: none; font-family: inherit; color: #94a3b8; font-size: 12px; text-decoration: underline; cursor: pointer; margin-top: 14px; display: block; margin-left: auto; margin-right: auto; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const { useState, useEffect } = React;
+
+/* ---------------- Data ---------------- */
+
+const QUIZ = [
+  {
+    id: 'investors',
+    question: 'Do you plan to raise money from investors, like venture capital?',
+    help: 'Investors give you money now in exchange for owning a piece of your company.',
+    options: [
+      { value: 'yes', label: 'Yes, I want to raise investor money' },
+      { value: 'no', label: 'No, I’ll fund it myself (or with loans)' },
+      { value: 'unsure', label: 'Not sure yet' },
+    ],
+  },
+  {
+    id: 'profit',
+    question: 'How much profit do you expect each year, once things are going?',
+    help: 'Profit is the money left over after you pay all your costs.',
+    options: [
+      { value: 'low', label: 'Under $60,000 a year' },
+      { value: 'high', label: 'More than $60,000 a year' },
+      { value: 'unsure', label: 'No idea yet — too early to tell' },
+    ],
+  },
+  {
+    id: 'simplicity',
+    question: 'How much paperwork are you okay with?',
+    help: 'Some business types need yearly meetings, extra tax forms, and more record-keeping.',
+    options: [
+      { value: 'minimal', label: 'As little as possible, please' },
+      { value: 'fine', label: 'I don’t mind extra paperwork if it saves money' },
+    ],
+  },
+];
+
+function recommendEntity(a) {
+  if (a.investors === 'yes') {
+    return {
+      type: 'C-Corporation',
+      why: 'You want to raise money from investors. Investors almost always ask for a C-corp, because it lets them own shares of your company. It has the most paperwork, but it’s the standard choice for startups that want outside funding.',
+      note: 'Heads up: most startups that raise money form in Delaware first, then register in Virginia too. Talk to a startup lawyer before you file.',
+    };
+  }
+  if (a.profit === 'high' && a.simplicity === 'fine') {
+    return {
+      type: 'LLC with S-Corp election',
+      why: 'You expect solid profit and don’t mind some extra paperwork. An LLC keeps setup simple. Then, once profit passes about $60,000 a year, asking the IRS to tax it like an S-corp can lower your self-employment taxes. You start with the LLC now and add the S-corp part later.',
+      note: 'The S-corp election is a free IRS form (Form 2553). An accountant can tell you exactly when it starts saving you money.',
+    };
+  }
+  return {
+    type: 'LLC (Limited Liability Company)',
+    why: 'An LLC is the simplest way to protect your personal stuff — like your house and savings — if the business is ever sued or owes money. Setup is easy, Virginia charges just one $100 fee, and taxes stay simple: profit goes right on your personal tax return.',
+    note: 'This is the most common choice for new small businesses in Virginia. You can always switch to a corporation later if things take off.',
+  };
+}
+
+const STEPS = [
+  {
+    id: 'name',
+    title: 'Choose your business name',
+    explanation: 'Your business needs a name no one else in Virginia is using. Search the state’s official database to check. Tip: also check if the website address (domain) is free before you fall in love with a name.',
+    cost: 'Free', costNumber: 0,
+    time: '~30 minutes',
+    action: { label: 'Search names at Virginia SCC ↗', href: 'https://cis.scc.virginia.gov/EntitySearch/Index' },
+    tips: [
+      'For an LLC, the name must end with “LLC” or “Limited Liability Company.”',
+      'Write down 2–3 backup names in case your first pick is taken.',
+    ],
+  },
+  {
+    id: 'agent',
+    title: 'Appoint a registered agent',
+    explanation: 'A registered agent is the person who gets official mail for your business — like legal papers and state notices. They must have a street address in Virginia and be around during business hours. You can be your own agent for free, or pay a service (which keeps your home address off public records).',
+    cost: '$0 self / $50–$300 per year for a service', costNumber: 0,
+    time: '~20 minutes to decide',
+    action: { label: 'Registered agent rules (Virginia SCC) ↗', href: 'https://www.scc.virginia.gov/pages/Registered-Agent-FAQs' },
+    tips: [
+      'Being your own agent is fine if you work from a fixed Virginia address.',
+      'If you value privacy or travel a lot, a $125/year service is worth it.',
+    ],
+  },
+  {
+    id: 'articles',
+    title: 'File Articles of Organization',
+    explanation: 'This is the form that officially creates your business with the state. You file it online with the Virginia State Corporation Commission (SCC). Virginia usually approves it the same day or within a few days.',
+    cost: '$100 one-time state fee', costNumber: 100,
+    time: '~30 minutes online',
+    action: { label: 'File online at cis.scc.virginia.gov ↗', href: 'https://cis.scc.virginia.gov' },
+    tips: [
+      'You’ll need your business name and registered agent info from the last two steps.',
+      'Save the approval certificate — the bank will ask for it in Step 5.',
+    ],
+  },
+  {
+    id: 'ein',
+    title: 'Get your EIN from the IRS',
+    explanation: 'An EIN is like a Social Security number for your business. You need it to open a bank account, hire people, and file taxes. The IRS gives you one free, online, in about 15 minutes.',
+    warning: 'Watch out: some websites charge $75–$300 to “get your EIN for you.” Never pay for this. Only use the official IRS.gov site — it is always free.',
+    cost: 'Free — always', costNumber: 0,
+    time: '~15 minutes',
+    action: { label: 'Apply free at IRS.gov ↗', href: 'https://www.irs.gov/businesses/small-businesses-self-employed/get-an-employer-identification-number' },
+    tips: [
+      'The IRS online tool is open Mon–Fri, 7am–10pm Eastern.',
+      'You get the EIN instantly — download and save the letter (CP 575).',
+    ],
+  },
+  {
+    id: 'bank',
+    title: 'Open a business bank account',
+    explanation: 'Keep business money separate from personal money. It protects you legally and makes taxes way easier. Bring these documents to the bank (or upload them if you sign up online).',
+    cost: 'Usually free ($0–$25/month, depends on bank)', costNumber: 0,
+    time: '~1 hour',
+    action: { label: 'Compare free business checking options ↗', href: 'https://www.nerdwallet.com/best/small-business/business-checking-accounts' },
+    checklist: [
+      'Articles of Organization (state approval certificate)',
+      'EIN confirmation letter from the IRS (CP 575)',
+      'Your driver’s license or photo ID',
+      'Operating agreement — banks often ask, especially with partners',
+    ],
+    tips: [
+      'Local credit unions and online banks (Mercury, Relay, Bluevine) often have no monthly fee.',
+    ],
+  },
+  {
+    id: 'tax',
+    title: 'Register with Virginia Tax',
+    explanation: 'If you’ll sell products, hire employees, or collect sales tax, you must register with Virginia’s tax department. It’s free and done online. Not sure if you need to? Registering is quick and keeps you out of trouble.',
+    cost: 'Free', costNumber: 0,
+    time: '~30 minutes',
+    action: { label: 'Register at tax.virginia.gov ↗', href: 'https://www.tax.virginia.gov/register-business-virginia' },
+    tips: [
+      'You’ll need your EIN from Step 4.',
+      'Selling physical products? You’ll collect Virginia sales tax (5.3%–7% depending on your area).',
+    ],
+  },
+  {
+    id: 'license',
+    title: 'Check local business license rules',
+    explanation: 'Most Virginia cities and counties require a local business license (often called a “BPOL” license). The cost depends on where you are — many places charge $30–$50 for new small businesses. Call your city or county’s Commissioner of the Revenue office to ask.',
+    cost: 'Varies — typically $30–$100', costNumber: 50, costIsEstimate: true,
+    time: '~1 hour',
+    action: { label: 'Find your local government office ↗', href: 'https://www.virginia.gov/local-government/' },
+    tips: [
+      'Search “[your county] Commissioner of the Revenue business license” for the exact form.',
+      'Home-based business? Ask about a zoning permit too while you’re on the phone.',
+    ],
+  },
+];
+
+const WHATS_NEXT = [
+  { icon: '📒', title: 'Set up bookkeeping', detail: 'Track every dollar in and out from day one. Even a simple spreadsheet works to start.' },
+  { icon: '🛡️', title: 'Get business insurance', detail: 'General liability insurance protects you if someone gets hurt or property gets damaged.' },
+  { icon: '🧾', title: 'Plan for taxes', detail: 'Set aside 25–30% of profit for taxes, and remember quarterly estimated payments.' },
+  { icon: '🤝', title: 'Write an operating agreement', detail: 'Especially with partners — it’s the rulebook for who owns what and who decides what.' },
+];
+
+/* ---------------- Persistence ---------------- */
+
+const STORE_KEY = 'business-launchpad-v1';
+function loadState() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }
+  catch { return {}; }
+}
+
+/* ---------------- Shared bits ---------------- */
+
+function TopBar() {
+  return (
+    <div className="topbar">
+      <div className="logo">🚀</div>
+      <div>
+        <div className="brandname">Business Launchpad</div>
+        <div className="brandtag">Start your business, one step at a time</div>
+      </div>
+    </div>
+  );
+}
+
+function ProgressBar({ done, total }) {
+  const pct = Math.round((done / total) * 100);
+  return (
+    <div className="progress-wrap">
+      <div className="progress-label">
+        <span>{done} of {total} steps complete</span>
+        <span>{pct}%</span>
+      </div>
+      <div className="progress-track">
+        <div className="progress-fill" style={{ width: pct + '%' }} />
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Screens ---------------- */
+
+function Welcome({ onStart }) {
+  return (
+    <div>
+      <div className="card" style={{ paddingTop: 28, paddingBottom: 28 }}>
+        <h1>Turn your idea into a real, legal business.</h1>
+        <p className="sub">
+          Answer a few quick questions and we’ll build you a personal, step-by-step
+          roadmap to legally form your business in Virginia — in plain English,
+          with real links and real costs.
+        </p>
+        <div className="hero-badges">
+          <span className="hero-badge">✓ 7 clear steps</span>
+          <span className="hero-badge">✓ ~$100–$150 total</span>
+          <span className="hero-badge">✓ No lawyer needed</span>
+        </div>
+        <button className="btn btn-primary" onClick={onStart}>Get started →</button>
+      </div>
+      <p className="footer-note">
+        Business Launchpad is a guide, not legal advice. For tricky situations, talk to a lawyer or accountant.
+      </p>
+    </div>
+  );
+}
+
+function Intake({ idea, setIdea, team, setTeam, onNext }) {
+  const ready = idea.trim().length > 0 && team;
+  return (
+    <div className="card">
+      <h2>Tell us about your business</h2>
+      <p className="sub" style={{ marginBottom: 20 }}>Three quick things, then we’ll figure out the right business type for you.</p>
+
+      <div className="field">
+        <label className="field-label" htmlFor="idea">What’s your business idea?</label>
+        <textarea
+          id="idea"
+          placeholder="Example: A mobile dog grooming service for Richmond"
+          value={idea}
+          onChange={e => setIdea(e.target.value)}
+        />
+      </div>
+
+      <div className="field">
+        <label className="field-label" htmlFor="state">Which state?</label>
+        <select id="state" value="VA" onChange={() => {}}>
+          <option value="VA">Virginia</option>
+          <option disabled>More states coming soon…</option>
+        </select>
+        <div className="soon-note">We’re starting with Virginia. More states are on the way!</div>
+      </div>
+
+      <div className="field">
+        <label className="field-label">Are you doing this solo, or with partners?</label>
+        <button
+          className={'choice' + (team === 'solo' ? ' selected' : '')}
+          onClick={() => setTeam('solo')}
+        >👤&nbsp; Just me</button>
+        <button
+          className={'choice' + (team === 'partners' ? ' selected' : '')}
+          onClick={() => setTeam('partners')}
+        >👥&nbsp; Me + one or more partners</button>
+      </div>
+
+      <button className="btn btn-primary" disabled={!ready} onClick={onNext}>
+        Continue →
+      </button>
+    </div>
+  );
+}
+
+function Quiz({ answers, setAnswers, qIndex, setQIndex, onDone }) {
+  const q = QUIZ[qIndex];
+  const pick = (value) => {
+    const next = { ...answers, [q.id]: value };
+    setAnswers(next);
+    if (qIndex < QUIZ.length - 1) setQIndex(qIndex + 1);
+    else onDone(next);
+  };
+  return (
+    <div className="card">
+      <div className="quiz-dots">
+        {QUIZ.map((_, i) => <span key={i} className={i <= qIndex ? 'on' : ''} />)}
+      </div>
+      <div className="step-eyebrow">Find your business type · {qIndex + 1} of {QUIZ.length}</div>
+      <h2>{q.question}</h2>
+      <p className="sub" style={{ marginBottom: 16 }}>{q.help}</p>
+      {q.options.map(opt => (
+        <button
+          key={opt.value}
+          className={'choice' + (answers[q.id] === opt.value ? ' selected' : '')}
+          onClick={() => pick(opt.value)}
+        >{opt.label}</button>
+      ))}
+      {qIndex > 0 && (
+        <button className="navlink" onClick={() => setQIndex(qIndex - 1)}>← Back</button>
+      )}
+    </div>
+  );
+}
+
+function Recommendation({ reco, team, onNext }) {
+  return (
+    <div className="card">
+      <div className="step-eyebrow">Our recommendation</div>
+      <div className="reco-type">{reco.type}</div>
+      <p style={{ fontSize: 15 }}>{reco.why}</p>
+      {team === 'partners' && (
+        <p style={{ fontSize: 15, marginTop: 10 }}>
+          Since you have partners, put an <b>operating agreement</b> in writing early —
+          it says who owns what and who decides what. It prevents most partner fights.
+        </p>
+      )}
+      <div className="reco-note">💡 {reco.note}</div>
+      <div style={{ marginTop: 18 }}>
+        <button className="btn btn-primary" onClick={onNext}>Build my roadmap →</button>
+      </div>
+    </div>
+  );
+}
+
+function StepCard({ step, index, completed, onComplete, onUndo, onPrev, onNext, canPrev, canNext }) {
+  const isDone = completed.has(step.id);
+  return (
+    <div className="card">
+      <div className="step-eyebrow">Step {index + 1} of {STEPS.length}</div>
+      {isDone && <div className="done-banner">✅ You finished this step</div>}
+      <h2>{step.title}</h2>
+      <p style={{ fontSize: 15, marginTop: 6 }}>{step.explanation}</p>
+
+      {step.warning && <div className="warning">⚠️ {step.warning}</div>}
+
+      <div className="meta-row">
+        <div className="meta-chip">
+          <div className="k">Cost</div>
+          <div className="v">{step.cost}</div>
+        </div>
+        <div className="meta-chip">
+          <div className="k">Time</div>
+          <div className="v">{step.time}</div>
+        </div>
+      </div>
+
+      {step.checklist && (
+        <div>
+          <div className="doc-check-title">Bring these documents:</div>
+          <ul className="doc-check">
+            {step.checklist.map((c, i) => <li key={i}>{c}</li>)}
+          </ul>
+        </div>
+      )}
+
+      {step.tips && (
+        <div>
+          <div className="tips-title">Good to know:</div>
+          <ul className="tips">
+            {step.tips.map((t, i) => <li key={i}>{t}</li>)}
+          </ul>
+        </div>
+      )}
+
+      <div style={{ marginTop: 18 }}>
+        {step.action.href ? (
+          <a className="btn btn-primary" href={step.action.href} target="_blank" rel="noopener noreferrer">
+            {step.action.label}
+          </a>
+        ) : (
+          <div className="btn btn-secondary" style={{ cursor: 'default' }}>{step.action.label}</div>
+        )}
+        {isDone ? (
+          <button className="btn btn-secondary" onClick={onUndo}>Undo — mark as not done</button>
+        ) : (
+          <button className="btn btn-green" onClick={onComplete}>✓ Mark complete</button>
+        )}
+      </div>
+
+      <div className="step-nav">
+        <button className="navlink" onClick={onPrev} disabled={!canPrev}>← Previous</button>
+        <button className="navlink fwd" onClick={onNext} disabled={!canNext}>Next →</button>
+      </div>
+    </div>
+  );
+}
+
+function Summary({ idea, reco, onRestart, onReview }) {
+  const fixed = STEPS.filter(s => !s.costIsEstimate).reduce((n, s) => n + s.costNumber, 0);
+  const est = STEPS.filter(s => s.costIsEstimate).reduce((n, s) => n + s.costNumber, 0);
+  return (
+    <div>
+      <div className="card" style={{ textAlign: 'center', paddingTop: 30 }}>
+        <div style={{ fontSize: 44 }}>🎉</div>
+        <h1 style={{ fontSize: 24 }}>You did it!</h1>
+        <p className="sub">
+          {idea.trim() ? <span><b style={{color:'var(--ink)'}}>{idea.trim()}</b> is now a real, legal business in Virginia.</span>
+            : 'Your business is now legally formed in Virginia.'}
+        </p>
+      </div>
+
+      <div className="card">
+        <h2 style={{ fontSize: 17 }}>Everything you completed</h2>
+        <div className="summary-list">
+          <div className="summary-item">
+            <span className="check">✓</span>
+            <span>Chose your business type: <b>{reco.type}</b></span>
+          </div>
+          {STEPS.map((s, i) => (
+            <div className="summary-item" key={s.id}>
+              <span className="check">✓</span>
+              <span>{s.title}</span>
+              <span className="cost">{s.costNumber > 0 ? (s.costIsEstimate ? '~$' : '$') + s.costNumber : 'Free'}</span>
+            </div>
+          ))}
+        </div>
+        <div className="total-row">
+          <span>Total spent</span>
+          <span className="amt">${fixed}{est > 0 ? ` + ~$${est}` : ''}</span>
+        </div>
+        <div className="total-foot">
+          ${fixed} in required state fees, plus about ${est} for your local license (varies by county).
+          Registered agent service and bank fees extra if you chose those.
+        </div>
+      </div>
+
+      <div className="card">
+        <h2 style={{ fontSize: 17 }}>What’s next for your business</h2>
+        <p className="sub" style={{ fontSize: 13.5 }}>Coming soon to Business Launchpad — here’s what to think about now:</p>
+        <div style={{ marginTop: 6 }}>
+          {WHATS_NEXT.map((n, i) => (
+            <div className="next-item" key={i}>
+              <div className="ico">{n.icon}</div>
+              <div>
+                <div className="t">{n.title}</div>
+                <div className="d">{n.detail}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <button className="btn btn-secondary" onClick={onReview}>Review my steps</button>
+      <button className="reset-link" onClick={onRestart}>Start over with a new business</button>
+    </div>
+  );
+}
+
+/* ---------------- App ---------------- */
+
+function App() {
+  const saved = loadState();
+  const [phase, setPhase] = useState(saved.phase || 'welcome');
+  const [idea, setIdea] = useState(saved.idea || '');
+  const [team, setTeam] = useState(saved.team || null);
+  const [answers, setAnswers] = useState(saved.answers || {});
+  const [qIndex, setQIndex] = useState(saved.qIndex || 0);
+  const [completed, setCompleted] = useState(new Set(saved.completed || []));
+  const [viewIndex, setViewIndex] = useState(saved.viewIndex || 0);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify({
+        phase, idea, team, answers, qIndex,
+        completed: Array.from(completed), viewIndex,
+      }));
+    } catch {}
+  }, [phase, idea, team, answers, qIndex, completed, viewIndex]);
+
+  const reco = recommendEntity(answers);
+
+  const markComplete = (id) => {
+    const next = new Set(completed);
+    next.add(id);
+    setCompleted(next);
+    if (next.size >= STEPS.length) {
+      setPhase('done');
+    } else {
+      // jump to the first not-yet-done step after the current one
+      let j = viewIndex + 1;
+      while (j < STEPS.length && next.has(STEPS[j].id)) j++;
+      if (j >= STEPS.length) { j = STEPS.findIndex(s => !next.has(s.id)); }
+      setViewIndex(j);
+    }
+  };
+
+  const undoComplete = (id) => {
+    const next = new Set(completed);
+    next.delete(id);
+    setCompleted(next);
+  };
+
+  const restart = () => {
+    try { localStorage.removeItem(STORE_KEY); } catch {}
+    setPhase('welcome'); setIdea(''); setTeam(null);
+    setAnswers({}); setQIndex(0);
+    setCompleted(new Set()); setViewIndex(0);
+  };
+
+  return (
+    <div>
+      <TopBar />
+
+      {phase === 'roadmap' && <ProgressBar done={completed.size} total={STEPS.length} />}
+
+      {phase === 'welcome' && <Welcome onStart={() => setPhase('intake')} />}
+
+      {phase === 'intake' && (
+        <Intake
+          idea={idea} setIdea={setIdea}
+          team={team} setTeam={setTeam}
+          onNext={() => { setQIndex(0); setPhase('quiz'); }}
+        />
+      )}
+
+      {phase === 'quiz' && (
+        <Quiz
+          answers={answers} setAnswers={setAnswers}
+          qIndex={qIndex} setQIndex={setQIndex}
+          onDone={() => setPhase('reco')}
+        />
+      )}
+
+      {phase === 'reco' && (
+        <Recommendation reco={reco} team={team} onNext={() => { setViewIndex(0); setPhase('roadmap'); }} />
+      )}
+
+      {phase === 'roadmap' && (
+        <div>
+          {idea.trim() && (
+            <div className="idea-banner">Your roadmap for: <b>{idea.trim()}</b> · {reco.type}</div>
+          )}
+          <StepCard
+            step={STEPS[viewIndex]}
+            index={viewIndex}
+            completed={completed}
+            onComplete={() => markComplete(STEPS[viewIndex].id)}
+            onUndo={() => undoComplete(STEPS[viewIndex].id)}
+            onPrev={() => setViewIndex(viewIndex - 1)}
+            onNext={() => setViewIndex(viewIndex + 1)}
+            canPrev={viewIndex > 0}
+            canNext={viewIndex < STEPS.length - 1}
+          />
+        </div>
+      )}
+
+      {phase === 'done' && (
+        <Summary
+          idea={idea} reco={reco}
+          onRestart={restart}
+          onReview={() => { setViewIndex(0); setPhase('roadmap'); }}
+        />
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
