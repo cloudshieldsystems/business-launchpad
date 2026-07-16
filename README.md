@@ -2,7 +2,7 @@
 
 A step-by-step guide that walks a new business owner through legally forming their business — one clear action at a time. Think TurboTax's guided flow, but for starting a business.
 
-**Live app:** https://USERNAME.github.io/business-launchpad/ *(GitHub Pages, from `docs/`)*
+**Live app:** https://helloworld171.github.io/business-launchpad/ *(GitHub Pages, from `docs/`)*
 
 ## v1 scope
 
