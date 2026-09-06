@@ -19,6 +19,7 @@ A step-by-step guide that walks a new business owner through legally forming the
 - **Formation record (v2):** captures the business name (Step 1), registered agent choice (Step 2), and EIN (Step 4); shown on the roadmap banner and the final summary with a one-tap copy button
 - **Annual fee reminder (v3):** capture the Articles approval date (Step 3); the summary shows the next Virginia annual registration fee due date ($50 LLC, last day of the formation month) with Google Calendar and .ics links (yearly repeat, 2-week alert)
 - **PDF export (v4):** "Download PDF" renders a one-page Formation Record (details, steps and costs, annual fee obligation) via the browser's print-to-PDF — no dependencies, works offline
+- **Share (v5):** native share sheet (Web Share API) sends the formation record as text to Messages, Mail, or Notes; falls back to a prefilled email on browsers without it
 - **Final screen:** summary, formation record, total spent (plus the ~$125/yr agent line if you chose a service), "what's next" teasers (bookkeeping, insurance, taxes)
 - Progress saved in localStorage; installable as a PWA (offline-capable, add to home screen)
 
