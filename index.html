@@ -326,6 +326,10 @@ const { useState, useEffect } = React;
 
 /* ---------------- Data ---------------- */
 
+// Typical annual price of a Virginia registered agent service. Single source of truth:
+// referenced by the Step 2 tip, the capture option, the summary, and the print sheet.
+const AGENT_SERVICE_COST = 125;
+
 const QUIZ = [
   {
     id: 'investors',
@@ -477,7 +481,7 @@ const STEPS = [
     action: { label: 'Registered agent rules (Virginia SCC) ↗', href: 'https://www.scc.virginia.gov/pages/Registered-Agent-FAQs' },
     tips: [
       'Being your own agent is fine if you work from a fixed Virginia address.',
-      'If you value privacy or travel a lot, a $125/year service is worth it.',
+      `If you value privacy or travel a lot, a $${AGENT_SERVICE_COST}/year service is worth it.`,
     ],
     capture: {
       key: 'agentChoice',
@@ -485,7 +489,7 @@ const STEPS = [
       label: 'Who\u2019s your registered agent?',
       options: [
         { value: 'self',    label: '\uD83D\uDC64  Me, at my Virginia address', annualCost: 0 },
-        { value: 'service', label: '\uD83C\uDFE2  A registered agent service', annualCost: 125 },
+        { value: 'service', label: '\uD83C\uDFE2  A registered agent service', annualCost: AGENT_SERVICE_COST },
       ],
     },
   },
@@ -879,7 +883,7 @@ function PrintSheet({ name, idea, reco, formation, fee, due, fixed, est, agentSe
           <tr className="ps-total"><td></td><td>One-time formation cost</td><td className="c">${fixed}{est > 0 ? ` + ~$${est}` : ''}</td></tr>
         </tbody>
       </table>
-      {agentService && <div className="ps-sub" style={{ marginTop: 6 }}>Plus registered agent service: ~$125/year (recurring).</div>}
+      {agentService && <div className="ps-sub" style={{ marginTop: 6 }}>Plus registered agent service: ~${AGENT_SERVICE_COST}/year (recurring).</div>}
 
       <div className="ps-section">Ongoing obligations</div>
       <div className="ps-callout">
@@ -1032,7 +1036,13 @@ function Summary({ idea, reco, record, onRestart, onReview, onGoToStep }) {
             <div className="summary-item" key={s.id}>
               <span className="check">✓</span>
               <span>{s.title}</span>
-              <span className="cost">{s.costNumber > 0 ? (s.costIsEstimate ? '~$' : '$') + s.costNumber : 'Free'}</span>
+              <span className="cost">
+                {s.id === 'agent' && agentService
+                  ? `~$${AGENT_SERVICE_COST}/yr`
+                  : s.costNumber > 0
+                    ? (s.costIsEstimate ? '~$' : '$') + s.costNumber
+                    : 'Free'}
+              </span>
             </div>
           ))}
         </div>
@@ -1044,7 +1054,7 @@ function Summary({ idea, reco, record, onRestart, onReview, onGoToStep }) {
           ${fixed} in required state fees, plus about ${est} for your local license (varies by county).
           Registered agent service and bank fees extra if you chose those.
           {agentService && (
-            <div style={{ marginTop: 6 }}>Registered agent service: ~$125/year (recurring, not included in the total above).</div>
+            <div style={{ marginTop: 6 }}>Registered agent service: ~${AGENT_SERVICE_COST}/year (recurring, not included in the total above).</div>
           )}
         </div>
       </div>
