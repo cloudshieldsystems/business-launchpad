@@ -18,6 +18,9 @@ await page.fill('#idea', 'line one\nline two\nline three\nline four');
 const ta = await page.$eval('#idea', el=>({h:el.clientHeight, sh:el.scrollHeight, overflow: el.scrollHeight>el.clientHeight+1}));
 check('Intake textarea grows to fit four lines (no internal scroll)', !ta.overflow, JSON.stringify(ta));
 await page.fill('#idea', longIdea);
+const stateOpts = await page.$$eval('#state option', os=>os.map(o=>({t:o.textContent, d:o.disabled})));
+check('State dropdown lists Virginia as the only selectable state', stateOpts.filter(o=>!o.d).map(o=>o.t).join('|')==='Virginia' && stateOpts.some(o=>o.d), JSON.stringify(stateOpts));
+check('State dropdown defaults to VA', (await page.inputValue('#state'))==='VA');
 await page.click('text=Just me');
 await page.click('text=Continue →');
 // quiz: investors no, profit high, simplicity fine -> LLC with S-Corp election
@@ -58,6 +61,7 @@ await page.fill('#ein', '12-3456789');
 await page.reload(); await page.waitForSelector('#ein');
 const einAfter = await page.inputValue('#ein');
 const stored = JSON.parse(await page.evaluate(()=>localStorage.getItem('business-launchpad-v1')));
+check('stateCode persisted as VA', stored.stateCode==='VA', JSON.stringify(stored.stateCode));
 check('Reload mid-roadmap: name, agent, EIN survive', einAfter==='12-3456789' && stored.record.businessName==='Cloud Shield Systems LLC' && stored.record.agentChoice==='service', JSON.stringify(stored.record));
 await page.click('button.btn-green');
 for (let i=0;i<3;i++){ await page.waitForTimeout(150); await page.click('button.btn-green'); }

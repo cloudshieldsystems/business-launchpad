@@ -680,12 +680,12 @@ const QUIZ = [{
     label: 'I don’t mind extra paperwork if it saves money'
   }]
 }];
-function recommendEntity(a) {
+function recommendEntity(a, st) {
   if (a.investors === 'yes') {
     return {
       type: 'C-Corporation',
       why: 'You want to raise money from investors. Investors almost always ask for a C-corp, because it lets them own shares of your company. It has the most paperwork, but it’s the standard choice for startups that want outside funding.',
-      note: 'Heads up: most startups that raise money form in Delaware first, then register in Virginia too. Talk to a startup lawyer before you file.'
+      note: `Heads up: most startups that raise money form in Delaware first, then register in ${st.name} too. Talk to a startup lawyer before you file.`
     };
   }
   if (a.profit === 'high' && a.simplicity === 'fine') {
@@ -697,8 +697,8 @@ function recommendEntity(a) {
   }
   return {
     type: 'LLC (Limited Liability Company)',
-    why: 'An LLC is the simplest way to protect your personal stuff — like your house and savings — if the business is ever sued or owes money. Setup is easy, Virginia charges just one $100 fee, and taxes stay simple: profit goes right on your personal tax return.',
-    note: 'This is the most common choice for new small businesses in Virginia. You can always switch to a corporation later if things take off.'
+    why: `An LLC is the simplest way to protect your personal stuff — like your house and savings — if the business is ever sued or owes money. Setup is easy, ${st.name} charges just one $${st.filingFee} fee, and taxes stay simple: profit goes right on your personal tax return.`,
+    note: `This is the most common choice for new small businesses in ${st.name}. You can always switch to a corporation later if things take off.`
   };
 }
 function displayName(record, idea) {
@@ -710,10 +710,10 @@ function displayName(record, idea) {
   return i.length > 60 ? i.slice(0, 57).trimEnd() + '…' : i;
 }
 
-/* ---------------- Annual registration fee ---------------- */
+/* ---------------- Annual report / registration fee: due-date rules ---------------- */
 
-// Virginia: the annual registration fee is due every year by the last day of the
-// month the business was formed, starting the year after formation.
+// Each state picks one of these as `annual.dueDate` (or supplies its own). Both return the
+// next due date on/after today as { y, m, d }, or null when the formation date is unknown.
 function parseISODate(str) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(str || '');
   if (!m) return null;
@@ -730,7 +730,9 @@ function parseISODate(str) {
 function lastDayOfMonth(y, m) {
   return new Date(y, m, 0).getDate();
 }
-function nextAnnualDue(articlesDate, today = new Date()) {
+// Rule A: due by the last day of the formation anniversary month, starting the year after
+// formation (Virginia).
+function dueAnniversaryMonthEnd(articlesDate, today = new Date()) {
   const p = parseISODate(articlesDate);
   if (!p) return null;
   const t = {
@@ -745,6 +747,26 @@ function nextAnnualDue(articlesDate, today = new Date()) {
     y,
     m: p.m,
     d: lastDayOfMonth(y, p.m)
+  };
+}
+// Rule B: due on a fixed calendar date every year (e.g. April 15), starting the year after
+// formation. Returns a dueDate function for a state entry.
+function dueFixedDate(month, day) {
+  return (articlesDate, today = new Date()) => {
+    const p = parseISODate(articlesDate);
+    if (!p) return null;
+    const t = {
+      y: today.getFullYear(),
+      m: today.getMonth() + 1,
+      d: today.getDate()
+    };
+    let y = p.y + 1;
+    while (y < t.y || y === t.y && (month < t.m || month === t.m && day < t.d)) y++;
+    return {
+      y,
+      m: month,
+      d: Math.min(day, lastDayOfMonth(y, month))
+    };
   };
 }
 function fmtDate(dt) {
@@ -768,19 +790,10 @@ function addDays(dt, n) {
     d: x.getDate()
   };
 }
-function annualFee(reco) {
-  return reco.type.startsWith('C-Corp') ? {
-    amount: 'from $100',
-    label: 'annual report + registration fee'
-  } : {
-    amount: '$50',
-    label: 'annual registration fee'
-  };
-}
-function calendarLinks(due, name, fee) {
+function calendarLinks(due, name, fee, st) {
   const who = name || 'My business';
-  const title = `${who}: Virginia ${fee.label} due (${fee.amount})`;
-  const details = `Pay online at https://cis.scc.virginia.gov before the end of the month. A $25 late penalty applies after the due date, and the state can cancel your business if it stays unpaid.`;
+  const title = `${who}: ${st.name} ${fee.label} due (${fee.amount})`;
+  const details = `Pay online at ${st.annual.payUrl} before ${st.annual.ruleText}. A ${st.annual.latePenalty} late penalty applies after the due date, and the state can cancel your business if it stays unpaid.`;
   const start = ymd(due),
     end = ymd(addDays(due, 1));
   const enc = encodeURIComponent;
@@ -790,77 +803,16 @@ function calendarLinks(due, name, fee) {
     y: new Date().getFullYear(),
     m: new Date().getMonth() + 1,
     d: new Date().getDate()
-  })}T000000Z`, `DTSTART;VALUE=DATE:${start}`, `DTEND;VALUE=DATE:${end}`, 'RRULE:FREQ=YEARLY', `SUMMARY:${esc(title)}`, `DESCRIPTION:${esc(details)}`, 'BEGIN:VALARM', 'TRIGGER:-P14D', 'ACTION:DISPLAY', 'DESCRIPTION:Virginia annual fee due in 2 weeks', 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+  })}T000000Z`, `DTSTART;VALUE=DATE:${start}`, `DTEND;VALUE=DATE:${end}`, 'RRULE:FREQ=YEARLY', `SUMMARY:${esc(title)}`, `DESCRIPTION:${esc(details)}`, 'BEGIN:VALARM', 'TRIGGER:-P14D', 'ACTION:DISPLAY', `DESCRIPTION:${st.name} annual fee due in 2 weeks`, 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
   return {
     google,
     ics: 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics)
   };
 }
-const STEPS = [{
-  id: 'name',
-  title: 'Choose your business name',
-  explanation: 'Your business needs a name no one else in Virginia is using. Search the state’s official database to check. Tip: also check if the website address (domain) is free before you fall in love with a name.',
-  cost: 'Free',
-  costNumber: 0,
-  time: '~30 minutes',
-  action: {
-    label: 'Search names at Virginia SCC ↗',
-    href: 'https://cis.scc.virginia.gov/EntitySearch/Index'
-  },
-  tips: ['For an LLC, the name must end with “LLC” or “Limited Liability Company.”', 'Write down 2–3 backup names in case your first pick is taken.'],
-  capture: {
-    key: 'businessName',
-    type: 'text',
-    label: 'What name did you land on?',
-    placeholder: 'Example: Cloud Shield Systems LLC',
-    help: 'We\u2019ll use this on your roadmap and your final summary.',
-    required: true
-  }
-}, {
-  id: 'agent',
-  title: 'Appoint a registered agent',
-  explanation: 'A registered agent is the person who gets official mail for your business — like legal papers and state notices. They must have a street address in Virginia and be around during business hours. You can be your own agent for free, or pay a service (which keeps your home address off public records).',
-  cost: '$0 self / $50–$300 per year for a service',
-  costNumber: 0,
-  time: '~20 minutes to decide',
-  action: {
-    label: 'Registered agent rules (Virginia SCC) ↗',
-    href: 'https://www.scc.virginia.gov/pages/Registered-Agent-FAQs'
-  },
-  tips: ['Being your own agent is fine if you work from a fixed Virginia address.', `If you value privacy or travel a lot, a $${AGENT_SERVICE_COST}/year service is worth it.`],
-  capture: {
-    key: 'agentChoice',
-    type: 'choice',
-    label: 'Who\u2019s your registered agent?',
-    options: [{
-      value: 'self',
-      label: '\uD83D\uDC64  Me, at my Virginia address',
-      annualCost: 0
-    }, {
-      value: 'service',
-      label: '\uD83C\uDFE2  A registered agent service',
-      annualCost: AGENT_SERVICE_COST
-    }]
-  }
-}, {
-  id: 'articles',
-  title: 'File Articles of Organization',
-  explanation: 'This is the form that officially creates your business with the state. You file it online with the Virginia State Corporation Commission (SCC). Virginia usually approves it the same day or within a few days.',
-  cost: '$100 one-time state fee',
-  costNumber: 100,
-  time: '~30 minutes online',
-  action: {
-    label: 'File online at cis.scc.virginia.gov ↗',
-    href: 'https://cis.scc.virginia.gov'
-  },
-  tips: ['You’ll need your business name and registered agent info from the last two steps.', 'Save the approval certificate — the bank will ask for it in Step 5.'],
-  capture: {
-    key: 'articlesDate',
-    type: 'date',
-    label: 'When did the SCC approve your Articles?',
-    help: 'Optional \u2014 sets your annual registration fee due date and gives you a calendar reminder on the last screen.'
-  }
-}, {
+
+/* ---------------- Steps shared by every state (federal) ---------------- */
+
+const STEP_EIN = {
   id: 'ein',
   title: 'Get your EIN from the IRS',
   explanation: 'An EIN is like a Social Security number for your business. You need it to open a bank account, hire people, and file taxes. The IRS gives you one free, online, in about 15 minutes.',
@@ -880,7 +832,8 @@ const STEPS = [{
     placeholder: '12-3456789',
     help: 'Optional \u2014 handy to have on your summary when you go to the bank.'
   }
-}, {
+};
+const STEP_BANK = {
   id: 'bank',
   title: 'Open a business bank account',
   explanation: 'Keep business money separate from personal money. It protects you legally and makes taxes way easier. Bring these documents to the bank (or upload them if you sign up online).',
@@ -893,32 +846,133 @@ const STEPS = [{
   },
   checklist: ['Articles of Organization (state approval certificate)', 'EIN confirmation letter from the IRS (CP 575)', 'Your driver’s license or photo ID', 'Operating agreement — banks often ask, especially with partners'],
   tips: ['Local credit unions and online banks (Mercury, Relay, Bluevine) often have no monthly fee.']
-}, {
-  id: 'tax',
-  title: 'Register with Virginia Tax',
-  explanation: 'If you’ll sell products, hire employees, or collect sales tax, you must register with Virginia’s tax department. It’s free and done online. Not sure if you need to? Registering is quick and keeps you out of trouble.',
-  cost: 'Free',
-  costNumber: 0,
-  time: '~30 minutes',
-  action: {
-    label: 'Register at tax.virginia.gov ↗',
-    href: 'https://www.tax.virginia.gov/register-business-virginia'
-  },
-  tips: ['You’ll need your EIN from Step 4.', 'Selling physical products? You’ll collect Virginia sales tax (5.3%–7% depending on your area).']
-}, {
-  id: 'license',
-  title: 'Check local business license rules',
-  explanation: 'Most Virginia cities and counties require a local business license (often called a “BPOL” license). The cost depends on where you are — many places charge $30–$50 for new small businesses. Call your city or county’s Commissioner of the Revenue office to ask.',
-  cost: 'Varies — typically $30–$100',
-  costNumber: 50,
-  costIsEstimate: true,
-  time: '~1 hour',
-  action: {
-    label: 'Find your local government office ↗',
-    href: 'https://www.virginia.gov/local-government/'
-  },
-  tips: ['Search “[your county] Commissioner of the Revenue business license” for the exact form.', 'Home-based business? Ask about a zoning permit too while you’re on the phone.']
-}];
+};
+
+/* ---------------- States ---------------- */
+
+// Everything state-specific lives here. Adding a state = adding an entry with the same shape
+// (see README → "Adding a state"). Steps that are federal (EIN, bank account) are shared above.
+const DEFAULT_STATE = 'VA';
+const STATES = {
+  VA: {
+    code: 'VA',
+    name: 'Virginia',
+    agency: {
+      name: 'Virginia State Corporation Commission',
+      short: 'SCC'
+    },
+    taxAgency: 'Virginia Tax',
+    filingFee: 100,
+    costBadge: '~$100–$150 total',
+    ideaPlaceholder: 'Example: A mobile dog grooming service for Richmond',
+    steps: [{
+      id: 'name',
+      title: 'Choose your business name',
+      explanation: 'Your business needs a name no one else in Virginia is using. Search the state’s official database to check. Tip: also check if the website address (domain) is free before you fall in love with a name.',
+      cost: 'Free',
+      costNumber: 0,
+      time: '~30 minutes',
+      action: {
+        label: 'Search names at Virginia SCC ↗',
+        href: 'https://cis.scc.virginia.gov/EntitySearch/Index'
+      },
+      tips: ['For an LLC, the name must end with “LLC” or “Limited Liability Company.”', 'Write down 2–3 backup names in case your first pick is taken.'],
+      capture: {
+        key: 'businessName',
+        type: 'text',
+        label: 'What name did you land on?',
+        placeholder: 'Example: Cloud Shield Systems LLC',
+        help: 'We\u2019ll use this on your roadmap and your final summary.',
+        required: true
+      }
+    }, {
+      id: 'agent',
+      title: 'Appoint a registered agent',
+      explanation: 'A registered agent is the person who gets official mail for your business — like legal papers and state notices. They must have a street address in Virginia and be around during business hours. You can be your own agent for free, or pay a service (which keeps your home address off public records).',
+      cost: '$0 self / $50–$300 per year for a service',
+      costNumber: 0,
+      time: '~20 minutes to decide',
+      action: {
+        label: 'Registered agent rules (Virginia SCC) ↗',
+        href: 'https://www.scc.virginia.gov/pages/Registered-Agent-FAQs'
+      },
+      tips: ['Being your own agent is fine if you work from a fixed Virginia address.', `If you value privacy or travel a lot, a $${AGENT_SERVICE_COST}/year service is worth it.`],
+      capture: {
+        key: 'agentChoice',
+        type: 'choice',
+        label: 'Who\u2019s your registered agent?',
+        options: [{
+          value: 'self',
+          label: '\uD83D\uDC64  Me, at my Virginia address',
+          annualCost: 0
+        }, {
+          value: 'service',
+          label: '\uD83C\uDFE2  A registered agent service',
+          annualCost: AGENT_SERVICE_COST
+        }]
+      }
+    }, {
+      id: 'articles',
+      title: 'File Articles of Organization',
+      explanation: 'This is the form that officially creates your business with the state. You file it online with the Virginia State Corporation Commission (SCC). Virginia usually approves it the same day or within a few days.',
+      cost: '$100 one-time state fee',
+      costNumber: 100,
+      time: '~30 minutes online',
+      action: {
+        label: 'File online at cis.scc.virginia.gov ↗',
+        href: 'https://cis.scc.virginia.gov'
+      },
+      tips: ['You’ll need your business name and registered agent info from the last two steps.', 'Save the approval certificate — the bank will ask for it in Step 5.'],
+      capture: {
+        key: 'articlesDate',
+        type: 'date',
+        label: 'When did the SCC approve your Articles?',
+        help: 'Optional \u2014 sets your annual registration fee due date and gives you a calendar reminder on the last screen.'
+      }
+    }, STEP_EIN, STEP_BANK, {
+      id: 'tax',
+      title: 'Register with Virginia Tax',
+      explanation: 'If you’ll sell products, hire employees, or collect sales tax, you must register with Virginia’s tax department. It’s free and done online. Not sure if you need to? Registering is quick and keeps you out of trouble.',
+      cost: 'Free',
+      costNumber: 0,
+      time: '~30 minutes',
+      action: {
+        label: 'Register at tax.virginia.gov ↗',
+        href: 'https://www.tax.virginia.gov/register-business-virginia'
+      },
+      tips: ['You’ll need your EIN from Step 4.', 'Selling physical products? You’ll collect Virginia sales tax (5.3%–7% depending on your area).']
+    }, {
+      id: 'license',
+      title: 'Check local business license rules',
+      explanation: 'Most Virginia cities and counties require a local business license (often called a “BPOL” license). The cost depends on where you are — many places charge $30–$50 for new small businesses. Call your city or county’s Commissioner of the Revenue office to ask.',
+      cost: 'Varies — typically $30–$100',
+      costNumber: 50,
+      costIsEstimate: true,
+      time: '~1 hour',
+      action: {
+        label: 'Find your local government office ↗',
+        href: 'https://www.virginia.gov/local-government/'
+      },
+      tips: ['Search “[your county] Commissioner of the Revenue business license” for the exact form.', 'Home-based business? Ask about a zoning permit too while you’re on the phone.']
+    }],
+    annual: {
+      // Virginia LLC: $50 annual registration fee. Corporations: annual report + fee from $100.
+      fee: recoType => recoType.startsWith('C-Corp') ? {
+        amount: 'from $100',
+        label: 'annual report + registration fee'
+      } : {
+        amount: '$50',
+        label: 'annual registration fee'
+      },
+      ruleText: 'the last day of the month your business was formed',
+      dueDate: dueAnniversaryMonthEnd,
+      payUrl: 'https://cis.scc.virginia.gov',
+      payHost: 'cis.scc.virginia.gov',
+      latePenalty: '$25',
+      icsFilename: 'virginia-annual-fee.ics'
+    }
+  }
+};
 const WHATS_NEXT = [{
   icon: '📒',
   title: 'Set up bookkeeping',
@@ -983,6 +1037,7 @@ function ProgressBar({
 /* ---------------- Screens ---------------- */
 
 function Welcome({
+  st,
   onStart
 }) {
   return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
@@ -993,13 +1048,13 @@ function Welcome({
     }
   }, /*#__PURE__*/React.createElement("h1", null, "Turn your idea into a real, legal business."), /*#__PURE__*/React.createElement("p", {
     className: "sub"
-  }, "Answer a few quick questions and we\u2019ll build you a personal, step-by-step roadmap to legally form your business in Virginia \u2014 in plain English, with real links and real costs."), /*#__PURE__*/React.createElement("div", {
+  }, "Answer a few quick questions and we\u2019ll build you a personal, step-by-step roadmap to legally form your business in ", st.name, " \u2014 in plain English, with real links and real costs."), /*#__PURE__*/React.createElement("div", {
     className: "hero-badges"
   }, /*#__PURE__*/React.createElement("span", {
     className: "hero-badge"
   }, "\u2713 7 clear steps"), /*#__PURE__*/React.createElement("span", {
     className: "hero-badge"
-  }, "\u2713 ~$100\u2013$150 total"), /*#__PURE__*/React.createElement("span", {
+  }, "\u2713 ", st.costBadge), /*#__PURE__*/React.createElement("span", {
     className: "hero-badge"
   }, "\u2713 No lawyer needed")), /*#__PURE__*/React.createElement("button", {
     className: "btn btn-primary",
@@ -1017,6 +1072,8 @@ function autoGrow(el) {
   el.style.height = Math.min(el.scrollHeight + (el.offsetHeight - el.clientHeight), 260) + 'px';
 }
 function Intake({
+  st,
+  setStateCode,
   idea,
   setIdea,
   team,
@@ -1038,7 +1095,7 @@ function Intake({
     htmlFor: "idea"
   }, "What\u2019s your business idea?"), /*#__PURE__*/React.createElement("textarea", {
     id: "idea",
-    placeholder: "Example: A mobile dog grooming service for Richmond",
+    placeholder: st.ideaPlaceholder,
     value: idea,
     ref: autoGrow,
     onChange: e => {
@@ -1052,15 +1109,16 @@ function Intake({
     htmlFor: "state"
   }, "Which state?"), /*#__PURE__*/React.createElement("select", {
     id: "state",
-    value: "VA",
-    onChange: () => {}
-  }, /*#__PURE__*/React.createElement("option", {
-    value: "VA"
-  }, "Virginia"), /*#__PURE__*/React.createElement("option", {
+    value: st.code,
+    onChange: e => setStateCode(e.target.value)
+  }, Object.values(STATES).map(x => /*#__PURE__*/React.createElement("option", {
+    key: x.code,
+    value: x.code
+  }, x.name)), /*#__PURE__*/React.createElement("option", {
     disabled: true
   }, "More states coming soon\u2026")), /*#__PURE__*/React.createElement("div", {
     className: "soon-note"
-  }, "We\u2019re starting with Virginia. More states are on the way!")), /*#__PURE__*/React.createElement("div", {
+  }, "We\u2019re starting with ", st.name, ". More states are on the way!")), /*#__PURE__*/React.createElement("div", {
     className: "field"
   }, /*#__PURE__*/React.createElement("label", {
     className: "field-label"
@@ -1149,6 +1207,7 @@ function Recommendation({
 function StepCard({
   step,
   index,
+  total,
   completed,
   record,
   setRecordField,
@@ -1165,7 +1224,7 @@ function StepCard({
     className: "card"
   }, /*#__PURE__*/React.createElement("div", {
     className: "step-eyebrow"
-  }, "Step ", index + 1, " of ", STEPS.length), isDone && /*#__PURE__*/React.createElement("div", {
+  }, "Step ", index + 1, " of ", total), isDone && /*#__PURE__*/React.createElement("div", {
     className: "done-banner"
   }, "\u2705 You finished this step"), /*#__PURE__*/React.createElement("h2", null, step.title), /*#__PURE__*/React.createElement("p", {
     style: {
@@ -1261,6 +1320,7 @@ function StepCard({
   }, "Next \u2192")));
 }
 function PrintSheet({
+  st,
   name,
   idea,
   reco,
@@ -1287,7 +1347,7 @@ function PrintSheet({
     className: "ps-title"
   }, "Formation Record")), /*#__PURE__*/React.createElement("div", {
     className: "ps-meta"
-  }, "Virginia", /*#__PURE__*/React.createElement("br", null), "Generated ", today)), /*#__PURE__*/React.createElement("div", {
+  }, st.name, /*#__PURE__*/React.createElement("br", null), "Generated ", today)), /*#__PURE__*/React.createElement("div", {
     className: "ps-name"
   }, name || 'Your business'), /*#__PURE__*/React.createElement("div", {
     className: "ps-sub"
@@ -1305,7 +1365,7 @@ function PrintSheet({
     className: "ps-section"
   }, "Formation steps completed"), /*#__PURE__*/React.createElement("table", {
     className: "ps-grid"
-  }, /*#__PURE__*/React.createElement("tbody", null, STEPS.map((s, i) => /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("tbody", null, st.steps.map((s, i) => /*#__PURE__*/React.createElement("tr", {
     key: s.id
   }, /*#__PURE__*/React.createElement("td", {
     className: "k"
@@ -1326,11 +1386,12 @@ function PrintSheet({
     className: "ps-section"
   }, "Ongoing obligations"), /*#__PURE__*/React.createElement("div", {
     className: "ps-callout"
-  }, /*#__PURE__*/React.createElement("b", null, "Virginia ", fee.label, ": ", fee.amount, " every year"), ", due by the last day of your formation month.", due ? ` Next due: ${fmtDate(due)}.` : ' Add your Articles approval date in the app to see the exact date.', ' ', "Pay online at cis.scc.virginia.gov. A $25 late penalty applies after the due date."), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("b", null, st.name, " ", fee.label, ": ", fee.amount, " every year"), ", due by ", st.annual.ruleText, ".", due ? ` Next due: ${fmtDate(due)}.` : ' Add your Articles approval date in the app to see the exact date.', ' ', "Pay online at ", st.annual.payHost, ". A ", st.annual.latePenalty, " late penalty applies after the due date."), /*#__PURE__*/React.createElement("div", {
     className: "ps-foot"
-  }, /*#__PURE__*/React.createElement("p", null, "Keep this with your Articles of Organization certificate and your IRS EIN letter (CP 575). Banks, accountants, and Virginia Tax will ask for these details."), /*#__PURE__*/React.createElement("p", null, "Business Launchpad is a guide, not legal advice. cloudshieldsystems.github.io/business-launchpad")));
+  }, /*#__PURE__*/React.createElement("p", null, "Keep this with your Articles of Organization certificate and your IRS EIN letter (CP 575). Banks, accountants, and ", st.taxAgency, " will ask for these details."), /*#__PURE__*/React.createElement("p", null, "Business Launchpad is a guide, not legal advice. cloudshieldsystems.github.io/business-launchpad")));
 }
 function Summary({
+  st,
   idea,
   reco,
   record,
@@ -1338,14 +1399,15 @@ function Summary({
   onReview,
   onGoToStep
 }) {
-  const fixed = STEPS.filter(s => !s.costIsEstimate).reduce((n, s) => n + s.costNumber, 0);
-  const est = STEPS.filter(s => s.costIsEstimate).reduce((n, s) => n + s.costNumber, 0);
+  const steps = st.steps;
+  const fixed = steps.filter(s => !s.costIsEstimate).reduce((n, s) => n + s.costNumber, 0);
+  const est = steps.filter(s => s.costIsEstimate).reduce((n, s) => n + s.costNumber, 0);
   const name = displayName(record, idea);
   const agentService = record.agentChoice === 'service';
   const approved = parseISODate(record.articlesDate);
-  const due = nextAnnualDue(record.articlesDate);
-  const fee = annualFee(reco);
-  const cal = due ? calendarLinks(due, (record.businessName || '').trim(), fee) : null;
+  const due = st.annual.dueDate(record.articlesDate);
+  const fee = st.annual.fee(reco.type);
+  const cal = due ? calendarLinks(due, (record.businessName || '').trim(), fee, st) : null;
   const formation = [{
     label: 'Legal name',
     value: (record.businessName || '').trim()
@@ -1354,7 +1416,7 @@ function Summary({
     value: reco.type
   }, {
     label: 'Registered agent',
-    value: record.agentChoice ? agentService ? 'Registered agent service' : 'Self (my Virginia address)' : ''
+    value: record.agentChoice ? agentService ? 'Registered agent service' : `Self (my ${st.name} address)` : ''
   }, {
     label: 'Articles approved',
     value: approved ? fmtDate(approved) : ''
@@ -1363,7 +1425,7 @@ function Summary({
     value: (record.ein || '').trim()
   }, {
     label: 'State',
-    value: 'Virginia'
+    value: st.name
   }, {
     label: 'Annual fee due',
     value: due ? `${fmtDate(due)} (${fee.amount})` : ''
@@ -1422,6 +1484,7 @@ function Summary({
     document.body.removeChild(a);
   };
   return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(PrintSheet, {
+    st: st,
     name: name,
     idea: idea,
     reco: reco,
@@ -1453,7 +1516,7 @@ function Summary({
     style: {
       color: 'var(--ink)'
     }
-  }, name), " is now a real, legal business in Virginia.") : 'Your business is now legally formed in Virginia.')), hasRecord && /*#__PURE__*/React.createElement("div", {
+  }, name), " is now a real, legal business in ", st.name, ".") : `Your business is now legally formed in ${st.name}.`)), hasRecord && /*#__PURE__*/React.createElement("div", {
     className: "card"
   }, /*#__PURE__*/React.createElement("h2", {
     style: {
@@ -1464,7 +1527,7 @@ function Summary({
     style: {
       fontSize: 13.5
     }
-  }, "Keep this handy \u2014 the bank, your accountant, and Virginia Tax will all ask for it."), /*#__PURE__*/React.createElement("div", {
+  }, "Keep this handy \u2014 the bank, your accountant, and ", st.taxAgency, " will all ask for it."), /*#__PURE__*/React.createElement("div", {
     className: "record-list"
   }, formation.map(r => /*#__PURE__*/React.createElement("div", {
     className: "record-row",
@@ -1505,11 +1568,11 @@ function Summary({
     style: {
       fontSize: 14
     }
-  }, "Virginia charges a ", /*#__PURE__*/React.createElement("b", {
+  }, st.name, " charges a ", /*#__PURE__*/React.createElement("b", {
     style: {
       color: 'var(--ink)'
     }
-  }, fee.amount, " ", fee.label), " every year, due by the last day of the month your business was formed. Miss it and there\u2019s a $25 penalty \u2014 leave it long enough and the state cancels your business."), due ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }, fee.amount, " ", fee.label), " every year, due by ", st.annual.ruleText, ". Miss it and there\u2019s a ", st.annual.latePenalty, " penalty \u2014 leave it long enough and the state cancels your business."), due ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "due-box"
   }, /*#__PURE__*/React.createElement("div", {
     className: "k"
@@ -1517,7 +1580,7 @@ function Summary({
     className: "v"
   }, fmtDate(due)), /*#__PURE__*/React.createElement("div", {
     className: "d"
-  }, fee.amount, " \xB7 pay online at cis.scc.virginia.gov \xB7 repeats every year")), /*#__PURE__*/React.createElement("a", {
+  }, fee.amount, " \xB7 pay online at ", st.annual.payHost, " \xB7 repeats every year")), /*#__PURE__*/React.createElement("a", {
     className: "btn btn-primary",
     href: cal.google,
     target: "_blank",
@@ -1525,7 +1588,7 @@ function Summary({
   }, "Add to Google Calendar \u2197"), /*#__PURE__*/React.createElement("a", {
     className: "btn btn-secondary",
     href: cal.ics,
-    download: "virginia-annual-fee.ics"
+    download: st.annual.icsFilename
   }, "Download for Apple / Outlook (.ics)"), /*#__PURE__*/React.createElement("div", {
     className: "field-help",
     style: {
@@ -1534,9 +1597,9 @@ function Summary({
     }
   }, "The reminder repeats yearly and pings you two weeks before the due date.")) : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "field-help"
-  }, "Add the date the SCC approved your Articles (Step 3) and we\u2019ll show your exact due date and build a yearly calendar reminder."), /*#__PURE__*/React.createElement("button", {
+  }, "Add the date the ", st.agency.short, " approved your Articles (Step ", steps.findIndex(s => s.id === 'articles') + 1, ") and we\u2019ll show your exact due date and build a yearly calendar reminder."), /*#__PURE__*/React.createElement("button", {
     className: "btn btn-secondary",
-    onClick: () => onGoToStep(STEPS.findIndex(s => s.id === 'articles'))
+    onClick: () => onGoToStep(steps.findIndex(s => s.id === 'articles'))
   }, "Add my approval date"))), /*#__PURE__*/React.createElement("div", {
     className: "card"
   }, /*#__PURE__*/React.createElement("h2", {
@@ -1549,7 +1612,7 @@ function Summary({
     className: "summary-item"
   }, /*#__PURE__*/React.createElement("span", {
     className: "check"
-  }, "\u2713"), /*#__PURE__*/React.createElement("span", null, "Chose your business type: ", /*#__PURE__*/React.createElement("b", null, reco.type))), STEPS.map((s, i) => /*#__PURE__*/React.createElement("div", {
+  }, "\u2713"), /*#__PURE__*/React.createElement("span", null, "Chose your business type: ", /*#__PURE__*/React.createElement("b", null, reco.type))), steps.map((s, i) => /*#__PURE__*/React.createElement("div", {
     className: "summary-item",
     key: s.id
   }, /*#__PURE__*/React.createElement("span", {
@@ -1615,6 +1678,16 @@ function App() {
     ...prev,
     [key]: value
   }));
+  const [stateCode, setStateCodeRaw] = useState(STATES[saved.stateCode] ? saved.stateCode : DEFAULT_STATE);
+  const st = STATES[stateCode] || STATES[DEFAULT_STATE];
+  const STEPS = st.steps;
+  const setStateCode = code => {
+    if (!STATES[code] || code === stateCode) return;
+    // steps differ by state, so progress on the old roadmap no longer applies
+    setStateCodeRaw(code);
+    setCompleted(new Set());
+    setViewIndex(0);
+  };
   useEffect(() => {
     try {
       localStorage.setItem(STORE_KEY, JSON.stringify({
@@ -1624,12 +1697,13 @@ function App() {
         answers,
         qIndex,
         record,
+        stateCode,
         completed: Array.from(completed),
         viewIndex
       }));
     } catch {}
-  }, [phase, idea, team, answers, qIndex, record, completed, viewIndex]);
-  const reco = recommendEntity(answers);
+  }, [phase, idea, team, answers, qIndex, record, stateCode, completed, viewIndex]);
+  const reco = recommendEntity(answers, st);
   const markComplete = id => {
     const next = new Set(completed);
     next.add(id);
@@ -1663,13 +1737,17 @@ function App() {
     setCompleted(new Set());
     setViewIndex(0);
     setRecord({});
+    setStateCodeRaw(DEFAULT_STATE);
   };
   return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(TopBar, null), phase === 'roadmap' && /*#__PURE__*/React.createElement(ProgressBar, {
     done: completed.size,
     total: STEPS.length
   }), phase === 'welcome' && /*#__PURE__*/React.createElement(Welcome, {
+    st: st,
     onStart: () => setPhase('intake')
   }), phase === 'intake' && /*#__PURE__*/React.createElement(Intake, {
+    st: st,
+    setStateCode: setStateCode,
     idea: idea,
     setIdea: setIdea,
     team: team,
@@ -1696,6 +1774,7 @@ function App() {
   }, "Your roadmap for: ", /*#__PURE__*/React.createElement("b", null, displayName(record, idea)), " \xB7 ", reco.type), /*#__PURE__*/React.createElement(StepCard, {
     step: STEPS[viewIndex],
     index: viewIndex,
+    total: STEPS.length,
     completed: completed,
     record: record,
     setRecordField: setRecordField,
@@ -1706,6 +1785,7 @@ function App() {
     canPrev: viewIndex > 0,
     canNext: viewIndex < STEPS.length - 1
   })), phase === 'done' && /*#__PURE__*/React.createElement(Summary, {
+    st: st,
     idea: idea,
     reco: reco,
     record: record,

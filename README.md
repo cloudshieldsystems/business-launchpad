@@ -6,7 +6,7 @@ A step-by-step guide that walks a new business owner through legally forming the
 
 ## v1 scope
 
-- **Virginia only** (state dropdown shows "more states coming soon")
+- **Virginia only** for now — but all state-specific data lives in a `STATES` table, so new states are data entries (see [Adding a state](#adding-a-state))
 - **Intake:** business idea, entity-type quiz (recommends LLC / S-corp election / C-corp in plain English), solo vs. partners
 - **7-step roadmap**, one step at a time, with progress bar:
   1. Choose your business name (Virginia SCC name search)
@@ -54,6 +54,17 @@ A step-by-step guide that walks a new business owner through legally forming the
 Suites cover the whole flow: intake and textarea growth, the business-name gate, agent choice, EIN, Articles date, persistence across reloads, roadmap banner, summary headline, formation record and copy button, agent cost row and footer, annual fee due-date math, Google Calendar and .ics links, the print-to-PDF sheet (hidden on screen, one page in print), Share with its fallbacks, and legacy localStorage states.
 
 Options: `CHROMIUM_PATH=/path/to/chrome` to use a specific browser; `LIVE_URL=` to test a different deployment; `LIVE_VIA_CURL=1` for sandboxes where the browser can't open HTTPS tunnels but curl can.
+
+## Adding a state
+
+All state-specific content lives in one place in `index.html`: the `STATES` object. Virginia (`VA`) is the only entry today and doubles as the template. A new state is a data entry, not a code change.
+
+1. Copy the `VA` entry and rename the key and `code`/`name`.
+2. Fill in `agency` (name + short form used in prompts), `taxAgency`, `filingFee`, `costBadge`, and `ideaPlaceholder`.
+3. Rewrite the five state-specific steps (`name`, `agent`, `articles`, `tax`, `license`): titles, plain-English explanations, real links, costs (`costNumber`, `costIsEstimate`), tips, and the `capture` fields. Keep `STEP_EIN` and `STEP_BANK` in the same positions — they're federal and shared.
+4. Set `annual`: `fee(recoType)` returns `{ amount, label }`; `ruleText` completes the sentence "due by …"; `dueDate` is `dueAnniversaryMonthEnd` (Virginia-style, last day of the formation month) or `dueFixedDate(month, day)` (e.g. `dueFixedDate(4, 15)` for an April 15 annual report); plus `payUrl`, `payHost`, `latePenalty`, `icsFilename`.
+5. The intake dropdown, roadmap, summary, calendar links, print sheet, and entity recommendation text all read from the selected state automatically. Changing state on the intake screen resets roadmap progress because steps differ.
+6. Add a test file under `tests/` that walks the new state's roadmap, then `npm run build`, bump `CACHE` in `docs/sw.js`, and open a PR.
 
 ## Roadmap
 
