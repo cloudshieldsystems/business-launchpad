@@ -1,5 +1,5 @@
 // Business Launchpad service worker — precache the app shell for full offline use.
-const CACHE = 'launchpad-v4';
+const CACHE = 'launchpad-v5';
 const ASSETS = [
   './',
   './index.html',

@@ -91,6 +91,8 @@
   .btn-green:hover { background: #047857; }
   .btn-green:disabled { background: #a7f3d0; cursor: not-allowed; }
   .btn + .btn { margin-top: 10px; }
+  .btn-row { display: flex; gap: 10px; margin-top: 10px; }
+  .btn-row .btn { flex: 1 1 0; margin-top: 0; padding-left: 10px; padding-right: 10px; }
 
   label.field-label { display: block; font-weight: 600; font-size: 15px; margin-bottom: 6px; }
   .field-help { font-size: 13px; color: var(--ink-soft); margin-bottom: 10px; }
@@ -1377,15 +1379,44 @@ function Summary({
     window.print();
     setTimeout(restore, 60000); // safety net for browsers that never fire afterprint
   };
-  const copyRecord = () => {
-    const text = ['Formation record — Business Launchpad'].concat(formation.map(r => `${r.label}: ${r.value}`)).join('\n');
-    const done = () => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    };
+  const APP_URL = 'https://cloudshieldsystems.github.io/business-launchpad/';
+  const recordText = () => ['Formation record — Business Launchpad'].concat(formation.map(r => `${r.label}: ${r.value}`)).join('\n');
+  const flashCopied = () => {
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  const copyText = text => {
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(done).catch(() => {});
+      return navigator.clipboard.writeText(text).then(flashCopied).catch(() => {});
     }
+    return Promise.resolve();
+  };
+  const copyRecord = () => copyText(recordText());
+  const [shared, setShared] = useState('');
+  const shareRecord = () => {
+    const title = `${(record.businessName || '').trim() || 'My business'} — Formation Record`;
+    const text = recordText() + `\n\nBuilt with Business Launchpad: ${APP_URL}`;
+    if (navigator.share) {
+      // Native share sheet (iOS, Android, Safari, Edge, Chrome on desktop)
+      navigator.share({
+        title,
+        text
+      }).catch(err => {
+        if (err && err.name === 'AbortError') return; // user closed the sheet
+        copyText(text).then(() => {
+          setShared('copied');
+          setTimeout(() => setShared(''), 2500);
+        });
+      });
+      return;
+    }
+    // Fallback: prefilled email
+    const a = document.createElement('a');
+    a.href = `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(text)}`;
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
   return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(PrintSheet, {
     name: name,
@@ -1445,17 +1476,22 @@ function Summary({
     style: {
       marginTop: 14
     }
-  }, "\u2B07 Download PDF"), /*#__PURE__*/React.createElement("button", {
+  }, "\u2B07 Download PDF"), /*#__PURE__*/React.createElement("div", {
+    className: "btn-row"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-secondary",
+    onClick: shareRecord
+  }, shared === 'copied' ? 'Copied instead ✓' : '↗ Share'), /*#__PURE__*/React.createElement("button", {
     className: "btn btn-secondary",
     onClick: copyRecord
-  }, copied ? 'Copied ✓' : 'Copy my formation record'), /*#__PURE__*/React.createElement("div", {
+  }, copied ? 'Copied ✓' : 'Copy')), /*#__PURE__*/React.createElement("div", {
     className: "field-help",
     style: {
       textAlign: 'center',
       marginTop: 8,
       marginBottom: 0
     }
-  }, "PDF opens your device\u2019s print dialog \u2014 choose \u201CSave as PDF\u201D.")), /*#__PURE__*/React.createElement("div", {
+  }, "PDF opens your device\u2019s print dialog \u2014 choose \u201CSave as PDF\u201D. Share sends the record as text to Messages, Mail, or Notes.")), /*#__PURE__*/React.createElement("div", {
     className: "card"
   }, /*#__PURE__*/React.createElement("h2", {
     style: {
