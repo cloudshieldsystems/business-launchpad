@@ -1,0 +1,16 @@
+{
+  "name": "business-launchpad",
+  "version": "5.1.0",
+  "private": true,
+  "description": "Step-by-step guide to legally forming a business in Virginia. Static React app deployed from docs/ via GitHub Pages.",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node tests/run.mjs",
+    "test:live": "node tests/run.mjs --live"
+  },
+  "devDependencies": {
+    "@babel/standalone": "7.26.4",
+    "playwright": "^1.63.0"
+  }
+}
