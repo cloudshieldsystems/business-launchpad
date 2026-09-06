@@ -637,6 +637,9 @@ const {
 
 /* ---------------- Data ---------------- */
 
+// Typical annual price of a Virginia registered agent service. Single source of truth:
+// referenced by the Step 2 tip, the capture option, the summary, and the print sheet.
+const AGENT_SERVICE_COST = 125;
 const QUIZ = [{
   id: 'investors',
   question: 'Do you plan to raise money from investors, like venture capital?',
@@ -824,7 +827,7 @@ const STEPS = [{
     label: 'Registered agent rules (Virginia SCC) ↗',
     href: 'https://www.scc.virginia.gov/pages/Registered-Agent-FAQs'
   },
-  tips: ['Being your own agent is fine if you work from a fixed Virginia address.', 'If you value privacy or travel a lot, a $125/year service is worth it.'],
+  tips: ['Being your own agent is fine if you work from a fixed Virginia address.', `If you value privacy or travel a lot, a $${AGENT_SERVICE_COST}/year service is worth it.`],
   capture: {
     key: 'agentChoice',
     type: 'choice',
@@ -836,7 +839,7 @@ const STEPS = [{
     }, {
       value: 'service',
       label: '\uD83C\uDFE2  A registered agent service',
-      annualCost: 125
+      annualCost: AGENT_SERVICE_COST
     }]
   }
 }, {
@@ -1319,7 +1322,7 @@ function PrintSheet({
     style: {
       marginTop: 6
     }
-  }, "Plus registered agent service: ~$125/year (recurring)."), /*#__PURE__*/React.createElement("div", {
+  }, "Plus registered agent service: ~$", AGENT_SERVICE_COST, "/year (recurring)."), /*#__PURE__*/React.createElement("div", {
     className: "ps-section"
   }, "Ongoing obligations"), /*#__PURE__*/React.createElement("div", {
     className: "ps-callout"
@@ -1553,7 +1556,7 @@ function Summary({
     className: "check"
   }, "\u2713"), /*#__PURE__*/React.createElement("span", null, s.title), /*#__PURE__*/React.createElement("span", {
     className: "cost"
-  }, s.costNumber > 0 ? (s.costIsEstimate ? '~$' : '$') + s.costNumber : 'Free')))), /*#__PURE__*/React.createElement("div", {
+  }, s.id === 'agent' && agentService ? `~$${AGENT_SERVICE_COST}/yr` : s.costNumber > 0 ? (s.costIsEstimate ? '~$' : '$') + s.costNumber : 'Free')))), /*#__PURE__*/React.createElement("div", {
     className: "total-row"
   }, /*#__PURE__*/React.createElement("span", null, "Total spent"), /*#__PURE__*/React.createElement("span", {
     className: "amt"
@@ -1563,7 +1566,7 @@ function Summary({
     style: {
       marginTop: 6
     }
-  }, "Registered agent service: ~$125/year (recurring, not included in the total above)."))), /*#__PURE__*/React.createElement("div", {
+  }, "Registered agent service: ~$", AGENT_SERVICE_COST, "/year (recurring, not included in the total above)."))), /*#__PURE__*/React.createElement("div", {
     className: "card"
   }, /*#__PURE__*/React.createElement("h2", {
     style: {
