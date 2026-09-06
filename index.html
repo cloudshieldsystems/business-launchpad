@@ -288,6 +288,32 @@
     padding: 6px 12px; border-radius: 99px;
   }
   .footer-note { text-align: center; font-size: 12px; color: #94a3b8; margin-top: 20px; padding: 0 10px; }
+  /* ---- Formation record PDF (print sheet) ---- */
+  .print-sheet { display: none; }
+  @media print {
+    @page { size: letter; margin: 14mm 16mm; }
+    html, body { background: #fff !important; }
+    #root { max-width: none; padding: 0; }
+    .no-print { display: none !important; }
+    .print-sheet { display: block; color: #111; font-size: 12px; line-height: 1.45; }
+    .ps-head { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #111; padding-bottom: 8px; margin-bottom: 14px; }
+    .ps-brand { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #555; }
+    .ps-title { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; margin-top: 2px; }
+    .ps-meta { font-size: 11px; color: #555; text-align: right; }
+    .ps-name { font-size: 20px; font-weight: 800; margin: 0 0 4px; }
+    .ps-sub { color: #444; margin-bottom: 12px; }
+    .ps-section { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #555; margin: 14px 0 4px; }
+    .ps-grid { width: 100%; border-collapse: collapse; }
+    .ps-grid td { padding: 5px 0; border-bottom: 1px solid #ddd; vertical-align: top; }
+    .ps-grid td.k { width: 38%; color: #555; }
+    .ps-grid td.v { font-weight: 600; }
+    .ps-grid td.c { text-align: right; white-space: nowrap; }
+    .ps-total td { border-top: 2px solid #111; border-bottom: none; font-weight: 700; padding-top: 7px; }
+    .ps-callout { border: 1px solid #bbb; border-radius: 8px; padding: 10px 12px; margin-top: 8px; background: #f7f7f7; }
+    .ps-foot { margin-top: 18px; padding-top: 8px; border-top: 1px solid #ddd; font-size: 10.5px; color: #666; }
+    .ps-foot p { margin: 2px 0; }
+  }
+
   .reset-link { background: none; border: none; font-family: inherit; color: #94a3b8; font-size: 12px; text-decoration: underline; cursor: pointer; margin-top: 14px; display: block; margin-left: auto; margin-right: auto; }
 </style>
 </head>
@@ -561,7 +587,7 @@ function loadState() {
 
 function TopBar() {
   return (
-    <div className="topbar">
+    <div className="topbar no-print">
       <div className="logo">🚀</div>
       <div>
         <div className="brandname">Business Launchpad</div>
@@ -814,6 +840,60 @@ function StepCard({ step, index, completed, record, setRecordField, onComplete, 
   );
 }
 
+function PrintSheet({ name, idea, reco, formation, fee, due, fixed, est, agentService }) {
+  const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  return (
+    <div className="print-sheet" aria-hidden="true">
+      <div className="ps-head">
+        <div>
+          <div className="ps-brand">Business Launchpad</div>
+          <div className="ps-title">Formation Record</div>
+        </div>
+        <div className="ps-meta">Virginia<br />Generated {today}</div>
+      </div>
+
+      <div className="ps-name">{name || 'Your business'}</div>
+      <div className="ps-sub">{reco.type}{idea.trim() ? ` · ${idea.trim()}` : ''}</div>
+
+      <div className="ps-section">Business details</div>
+      <table className="ps-grid">
+        <tbody>
+          {formation.map(r => (
+            <tr key={r.label}><td className="k">{r.label}</td><td className="v">{r.value}</td></tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div className="ps-section">Formation steps completed</div>
+      <table className="ps-grid">
+        <tbody>
+          {STEPS.map((s, i) => (
+            <tr key={s.id}>
+              <td className="k">Step {i + 1}</td>
+              <td className="v">{s.title}</td>
+              <td className="c">{s.costNumber > 0 ? (s.costIsEstimate ? '~$' : '$') + s.costNumber : 'Free'}</td>
+            </tr>
+          ))}
+          <tr className="ps-total"><td></td><td>One-time formation cost</td><td className="c">${fixed}{est > 0 ? ` + ~$${est}` : ''}</td></tr>
+        </tbody>
+      </table>
+      {agentService && <div className="ps-sub" style={{ marginTop: 6 }}>Plus registered agent service: ~$125/year (recurring).</div>}
+
+      <div className="ps-section">Ongoing obligations</div>
+      <div className="ps-callout">
+        <b>Virginia {fee.label}: {fee.amount} every year</b>, due by the last day of your formation month.
+        {due ? ` Next due: ${fmtDate(due)}.` : ' Add your Articles approval date in the app to see the exact date.'}
+        {' '}Pay online at cis.scc.virginia.gov. A $25 late penalty applies after the due date.
+      </div>
+
+      <div className="ps-foot">
+        <p>Keep this with your Articles of Organization certificate and your IRS EIN letter (CP 575). Banks, accountants, and Virginia Tax will ask for these details.</p>
+        <p>Business Launchpad is a guide, not legal advice. cloudshieldsystems.github.io/business-launchpad</p>
+      </div>
+    </div>
+  );
+}
+
 function Summary({ idea, reco, record, onRestart, onReview, onGoToStep }) {
   const fixed = STEPS.filter(s => !s.costIsEstimate).reduce((n, s) => n + s.costNumber, 0);
   const est = STEPS.filter(s => s.costIsEstimate).reduce((n, s) => n + s.costNumber, 0);
@@ -834,6 +914,15 @@ function Summary({ idea, reco, record, onRestart, onReview, onGoToStep }) {
   ].filter(r => r.value);
   const hasRecord = Boolean((record.businessName || '').trim() || record.agentChoice || (record.ein || '').trim() || approved);
   const [copied, setCopied] = useState(false);
+  const downloadPdf = () => {
+    // Print-to-PDF: the .print-sheet is the only thing visible in print media.
+    const prev = document.title;
+    document.title = `${(record.businessName || '').trim() || 'Business'} - Formation Record`;
+    const restore = () => { document.title = prev; window.removeEventListener('afterprint', restore); };
+    window.addEventListener('afterprint', restore);
+    window.print();
+    setTimeout(restore, 60000); // safety net for browsers that never fire afterprint
+  };
   const copyRecord = () => {
     const text = ['Formation record — Business Launchpad']
       .concat(formation.map(r => `${r.label}: ${r.value}`))
@@ -845,6 +934,8 @@ function Summary({ idea, reco, record, onRestart, onReview, onGoToStep }) {
   };
   return (
     <div>
+    <PrintSheet name={name} idea={idea} reco={reco} formation={formation} fee={fee} due={due} fixed={fixed} est={est} agentService={agentService} />
+    <div className="no-print">
       <div className="card" style={{ textAlign: 'center', paddingTop: 30 }}>
         <div style={{ fontSize: 44 }}>🎉</div>
         <h1 style={{ fontSize: 24 }}>You did it!</h1>
@@ -866,9 +957,15 @@ function Summary({ idea, reco, record, onRestart, onReview, onGoToStep }) {
               </div>
             ))}
           </div>
-          <button className="btn btn-secondary" onClick={copyRecord} style={{ marginTop: 14 }}>
+          <button className="btn btn-primary" onClick={downloadPdf} style={{ marginTop: 14 }}>
+            ⬇ Download PDF
+          </button>
+          <button className="btn btn-secondary" onClick={copyRecord}>
             {copied ? 'Copied ✓' : 'Copy my formation record'}
           </button>
+          <div className="field-help" style={{ textAlign: 'center', marginTop: 8, marginBottom: 0 }}>
+            PDF opens your device’s print dialog — choose “Save as PDF”.
+          </div>
         </div>
       )}
 
@@ -942,6 +1039,7 @@ function Summary({ idea, reco, record, onRestart, onReview, onGoToStep }) {
 
       <button className="btn btn-secondary" onClick={onReview}>Review my steps</button>
       <button className="reset-link" onClick={onRestart}>Start over with a new business</button>
+    </div>
     </div>
   );
 }

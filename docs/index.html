@@ -292,6 +292,32 @@
     padding: 6px 12px; border-radius: 99px;
   }
   .footer-note { text-align: center; font-size: 12px; color: #94a3b8; margin-top: 20px; padding: 0 10px; }
+  /* ---- Formation record PDF (print sheet) ---- */
+  .print-sheet { display: none; }
+  @media print {
+    @page { size: letter; margin: 14mm 16mm; }
+    html, body { background: #fff !important; }
+    #root { max-width: none; padding: 0; }
+    .no-print { display: none !important; }
+    .print-sheet { display: block; color: #111; font-size: 12px; line-height: 1.45; }
+    .ps-head { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #111; padding-bottom: 8px; margin-bottom: 14px; }
+    .ps-brand { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #555; }
+    .ps-title { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; margin-top: 2px; }
+    .ps-meta { font-size: 11px; color: #555; text-align: right; }
+    .ps-name { font-size: 20px; font-weight: 800; margin: 0 0 4px; }
+    .ps-sub { color: #444; margin-bottom: 12px; }
+    .ps-section { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #555; margin: 14px 0 4px; }
+    .ps-grid { width: 100%; border-collapse: collapse; }
+    .ps-grid td { padding: 5px 0; border-bottom: 1px solid #ddd; vertical-align: top; }
+    .ps-grid td.k { width: 38%; color: #555; }
+    .ps-grid td.v { font-weight: 600; }
+    .ps-grid td.c { text-align: right; white-space: nowrap; }
+    .ps-total td { border-top: 2px solid #111; border-bottom: none; font-weight: 700; padding-top: 7px; }
+    .ps-callout { border: 1px solid #bbb; border-radius: 8px; padding: 10px 12px; margin-top: 8px; background: #f7f7f7; }
+    .ps-foot { margin-top: 18px; padding-top: 8px; border-top: 1px solid #ddd; font-size: 10.5px; color: #666; }
+    .ps-foot p { margin: 2px 0; }
+  }
+
   .reset-link { background: none; border: none; font-family: inherit; color: #94a3b8; font-size: 12px; text-decoration: underline; cursor: pointer; margin-top: 14px; display: block; margin-left: auto; margin-right: auto; }
 </style>
 </head>
@@ -921,7 +947,7 @@ function loadState() {
 
 function TopBar() {
   return /*#__PURE__*/React.createElement("div", {
-    className: "topbar"
+    className: "topbar no-print"
   }, /*#__PURE__*/React.createElement("div", {
     className: "logo"
   }, "\uD83D\uDE80"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
@@ -1229,6 +1255,76 @@ function StepCard({
     disabled: !canNext
   }, "Next \u2192")));
 }
+function PrintSheet({
+  name,
+  idea,
+  reco,
+  formation,
+  fee,
+  due,
+  fixed,
+  est,
+  agentService
+}) {
+  const today = new Date().toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  });
+  return /*#__PURE__*/React.createElement("div", {
+    className: "print-sheet",
+    "aria-hidden": "true"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "ps-head"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "ps-brand"
+  }, "Business Launchpad"), /*#__PURE__*/React.createElement("div", {
+    className: "ps-title"
+  }, "Formation Record")), /*#__PURE__*/React.createElement("div", {
+    className: "ps-meta"
+  }, "Virginia", /*#__PURE__*/React.createElement("br", null), "Generated ", today)), /*#__PURE__*/React.createElement("div", {
+    className: "ps-name"
+  }, name || 'Your business'), /*#__PURE__*/React.createElement("div", {
+    className: "ps-sub"
+  }, reco.type, idea.trim() ? ` · ${idea.trim()}` : ''), /*#__PURE__*/React.createElement("div", {
+    className: "ps-section"
+  }, "Business details"), /*#__PURE__*/React.createElement("table", {
+    className: "ps-grid"
+  }, /*#__PURE__*/React.createElement("tbody", null, formation.map(r => /*#__PURE__*/React.createElement("tr", {
+    key: r.label
+  }, /*#__PURE__*/React.createElement("td", {
+    className: "k"
+  }, r.label), /*#__PURE__*/React.createElement("td", {
+    className: "v"
+  }, r.value))))), /*#__PURE__*/React.createElement("div", {
+    className: "ps-section"
+  }, "Formation steps completed"), /*#__PURE__*/React.createElement("table", {
+    className: "ps-grid"
+  }, /*#__PURE__*/React.createElement("tbody", null, STEPS.map((s, i) => /*#__PURE__*/React.createElement("tr", {
+    key: s.id
+  }, /*#__PURE__*/React.createElement("td", {
+    className: "k"
+  }, "Step ", i + 1), /*#__PURE__*/React.createElement("td", {
+    className: "v"
+  }, s.title), /*#__PURE__*/React.createElement("td", {
+    className: "c"
+  }, s.costNumber > 0 ? (s.costIsEstimate ? '~$' : '$') + s.costNumber : 'Free'))), /*#__PURE__*/React.createElement("tr", {
+    className: "ps-total"
+  }, /*#__PURE__*/React.createElement("td", null), /*#__PURE__*/React.createElement("td", null, "One-time formation cost"), /*#__PURE__*/React.createElement("td", {
+    className: "c"
+  }, "$", fixed, est > 0 ? ` + ~$${est}` : '')))), agentService && /*#__PURE__*/React.createElement("div", {
+    className: "ps-sub",
+    style: {
+      marginTop: 6
+    }
+  }, "Plus registered agent service: ~$125/year (recurring)."), /*#__PURE__*/React.createElement("div", {
+    className: "ps-section"
+  }, "Ongoing obligations"), /*#__PURE__*/React.createElement("div", {
+    className: "ps-callout"
+  }, /*#__PURE__*/React.createElement("b", null, "Virginia ", fee.label, ": ", fee.amount, " every year"), ", due by the last day of your formation month.", due ? ` Next due: ${fmtDate(due)}.` : ' Add your Articles approval date in the app to see the exact date.', ' ', "Pay online at cis.scc.virginia.gov. A $25 late penalty applies after the due date."), /*#__PURE__*/React.createElement("div", {
+    className: "ps-foot"
+  }, /*#__PURE__*/React.createElement("p", null, "Keep this with your Articles of Organization certificate and your IRS EIN letter (CP 575). Banks, accountants, and Virginia Tax will ask for these details."), /*#__PURE__*/React.createElement("p", null, "Business Launchpad is a guide, not legal advice. cloudshieldsystems.github.io/business-launchpad")));
+}
 function Summary({
   idea,
   reco,
@@ -1269,6 +1365,18 @@ function Summary({
   }].filter(r => r.value);
   const hasRecord = Boolean((record.businessName || '').trim() || record.agentChoice || (record.ein || '').trim() || approved);
   const [copied, setCopied] = useState(false);
+  const downloadPdf = () => {
+    // Print-to-PDF: the .print-sheet is the only thing visible in print media.
+    const prev = document.title;
+    document.title = `${(record.businessName || '').trim() || 'Business'} - Formation Record`;
+    const restore = () => {
+      document.title = prev;
+      window.removeEventListener('afterprint', restore);
+    };
+    window.addEventListener('afterprint', restore);
+    window.print();
+    setTimeout(restore, 60000); // safety net for browsers that never fire afterprint
+  };
   const copyRecord = () => {
     const text = ['Formation record — Business Launchpad'].concat(formation.map(r => `${r.label}: ${r.value}`)).join('\n');
     const done = () => {
@@ -1279,7 +1387,19 @@ function Summary({
       navigator.clipboard.writeText(text).then(done).catch(() => {});
     }
   };
-  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(PrintSheet, {
+    name: name,
+    idea: idea,
+    reco: reco,
+    formation: formation,
+    fee: fee,
+    due: due,
+    fixed: fixed,
+    est: est,
+    agentService: agentService
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "no-print"
+  }, /*#__PURE__*/React.createElement("div", {
     className: "card",
     style: {
       textAlign: 'center',
@@ -1320,12 +1440,22 @@ function Summary({
   }, r.label), /*#__PURE__*/React.createElement("span", {
     className: "v"
   }, r.value)))), /*#__PURE__*/React.createElement("button", {
-    className: "btn btn-secondary",
-    onClick: copyRecord,
+    className: "btn btn-primary",
+    onClick: downloadPdf,
     style: {
       marginTop: 14
     }
-  }, copied ? 'Copied ✓' : 'Copy my formation record')), /*#__PURE__*/React.createElement("div", {
+  }, "\u2B07 Download PDF"), /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-secondary",
+    onClick: copyRecord
+  }, copied ? 'Copied ✓' : 'Copy my formation record'), /*#__PURE__*/React.createElement("div", {
+    className: "field-help",
+    style: {
+      textAlign: 'center',
+      marginTop: 8,
+      marginBottom: 0
+    }
+  }, "PDF opens your device\u2019s print dialog \u2014 choose \u201CSave as PDF\u201D.")), /*#__PURE__*/React.createElement("div", {
     className: "card"
   }, /*#__PURE__*/React.createElement("h2", {
     style: {
@@ -1427,7 +1557,7 @@ function Summary({
   }, "Review my steps"), /*#__PURE__*/React.createElement("button", {
     className: "reset-link",
     onClick: onRestart
-  }, "Start over with a new business"));
+  }, "Start over with a new business")));
 }
 
 /* ---------------- App ---------------- */
