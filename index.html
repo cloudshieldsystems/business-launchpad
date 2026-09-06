@@ -103,7 +103,7 @@
   }
   textarea:focus, select:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12); }
   textarea { resize: vertical; min-height: 88px; max-height: 260px; overflow-y: auto; }
-  input[type="text"] {
+  input[type="text"], input[type="date"] {
     width: 100%;
     padding: 13px 14px;
     border: 1.5px solid var(--line);
@@ -114,7 +114,8 @@
     background: #fff;
     outline: none;
   }
-  input[type="text"]:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12); }
+  input[type="text"]:focus, input[type="date"]:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12); }
+  input[type="date"] { -webkit-appearance: none; appearance: none; min-height: 50px; }
   .field { margin-bottom: 20px; }
   .soon-note { font-size: 12px; color: var(--ink-soft); margin-top: 6px; }
 
@@ -272,6 +273,14 @@
   .record-row .k { color: var(--ink-soft); flex-shrink: 0; }
   .record-row .v { font-weight: 600; text-align: right; word-break: break-word; }
 
+  .due-box {
+    background: var(--brand-light); border: 1px solid #c7d2fe;
+    border-radius: 12px; padding: 14px 16px; margin: 12px 0 14px;
+  }
+  .due-box .k { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--brand); }
+  .due-box .v { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; margin: 2px 0; }
+  .due-box .d { font-size: 13px; color: var(--ink-soft); }
+
   .hero-badges { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 20px; }
   .hero-badge {
     font-size: 12.5px; font-weight: 600; color: var(--ink-soft);
@@ -352,6 +361,64 @@ function displayName(record, idea) {
   return i.length > 60 ? i.slice(0, 57).trimEnd() + '…' : i;
 }
 
+/* ---------------- Annual registration fee ---------------- */
+
+// Virginia: the annual registration fee is due every year by the last day of the
+// month the business was formed, starting the year after formation.
+function parseISODate(str) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(str || '');
+  if (!m) return null;
+  const y = +m[1], mo = +m[2], d = +m[3];
+  if (mo < 1 || mo > 12 || d < 1 || d > lastDayOfMonth(y, mo)) return null;
+  return { y, m: mo, d };
+}
+function lastDayOfMonth(y, m) { return new Date(y, m, 0).getDate(); }
+function nextAnnualDue(articlesDate, today = new Date()) {
+  const p = parseISODate(articlesDate);
+  if (!p) return null;
+  const t = { y: today.getFullYear(), m: today.getMonth() + 1, d: today.getDate() };
+  let y = p.y + 1;
+  // roll forward past any due dates that have already gone by
+  while (y < t.y || (y === t.y && (p.m < t.m || (p.m === t.m && lastDayOfMonth(y, p.m) < t.d)))) y++;
+  return { y, m: p.m, d: lastDayOfMonth(y, p.m) };
+}
+function fmtDate(dt) {
+  return new Date(dt.y, dt.m - 1, dt.d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+function pad2(n) { return String(n).padStart(2, '0'); }
+function ymd(dt) { return `${dt.y}${pad2(dt.m)}${pad2(dt.d)}`; }
+function addDays(dt, n) {
+  const x = new Date(dt.y, dt.m - 1, dt.d + n);
+  return { y: x.getFullYear(), m: x.getMonth() + 1, d: x.getDate() };
+}
+function annualFee(reco) {
+  return reco.type.startsWith('C-Corp')
+    ? { amount: 'from $100', label: 'annual report + registration fee' }
+    : { amount: '$50', label: 'annual registration fee' };
+}
+function calendarLinks(due, name, fee) {
+  const who = name || 'My business';
+  const title = `${who}: Virginia ${fee.label} due (${fee.amount})`;
+  const details = `Pay online at https://cis.scc.virginia.gov before the end of the month. A $25 late penalty applies after the due date, and the state can cancel your business if it stays unpaid.`;
+  const start = ymd(due), end = ymd(addDays(due, 1));
+  const enc = encodeURIComponent;
+  const google = 'https://calendar.google.com/calendar/render?action=TEMPLATE'
+    + `&text=${enc(title)}&dates=${start}/${end}&details=${enc(details)}&recur=${enc('RRULE:FREQ=YEARLY')}`;
+  const esc = (t) => t.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,');
+  const ics = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Business Launchpad//EN',
+    'BEGIN:VEVENT',
+    `UID:launchpad-annual-fee-${start}@businesslaunchpad`,
+    `DTSTAMP:${ymd({ y: new Date().getFullYear(), m: new Date().getMonth() + 1, d: new Date().getDate() })}T000000Z`,
+    `DTSTART;VALUE=DATE:${start}`, `DTEND;VALUE=DATE:${end}`,
+    'RRULE:FREQ=YEARLY',
+    `SUMMARY:${esc(title)}`, `DESCRIPTION:${esc(details)}`,
+    'BEGIN:VALARM', 'TRIGGER:-P14D', 'ACTION:DISPLAY', 'DESCRIPTION:Virginia annual fee due in 2 weeks', 'END:VALARM',
+    'END:VEVENT', 'END:VCALENDAR',
+  ].join('\r\n');
+  return { google, ics: 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics) };
+}
+
 const STEPS = [
   {
     id: 'name',
@@ -405,6 +472,12 @@ const STEPS = [
       'You’ll need your business name and registered agent info from the last two steps.',
       'Save the approval certificate — the bank will ask for it in Step 5.',
     ],
+    capture: {
+      key: 'articlesDate',
+      type: 'date',
+      label: 'When did the SCC approve your Articles?',
+      help: 'Optional \u2014 sets your annual registration fee due date and gives you a calendar reminder on the last screen.',
+    },
   },
   {
     id: 'ein',
@@ -691,10 +764,10 @@ function StepCard({ step, index, completed, record, setRecordField, onComplete, 
           <label className="field-label" htmlFor={step.capture.key}>{step.capture.label}</label>
           {step.capture.help && <div className="field-help">{step.capture.help}</div>}
 
-          {step.capture.type === 'text' && (
+          {(step.capture.type === 'text' || step.capture.type === 'date') && (
             <input
               id={step.capture.key}
-              type="text"
+              type={step.capture.type}
               placeholder={step.capture.placeholder || ''}
               value={record[step.capture.key] || ''}
               onChange={e => setRecordField(step.capture.key, e.target.value)}
@@ -741,19 +814,25 @@ function StepCard({ step, index, completed, record, setRecordField, onComplete, 
   );
 }
 
-function Summary({ idea, reco, record, onRestart, onReview }) {
+function Summary({ idea, reco, record, onRestart, onReview, onGoToStep }) {
   const fixed = STEPS.filter(s => !s.costIsEstimate).reduce((n, s) => n + s.costNumber, 0);
   const est = STEPS.filter(s => s.costIsEstimate).reduce((n, s) => n + s.costNumber, 0);
   const name = displayName(record, idea);
   const agentService = record.agentChoice === 'service';
+  const approved = parseISODate(record.articlesDate);
+  const due = nextAnnualDue(record.articlesDate);
+  const fee = annualFee(reco);
+  const cal = due ? calendarLinks(due, (record.businessName || '').trim(), fee) : null;
   const formation = [
     { label: 'Legal name', value: (record.businessName || '').trim() },
     { label: 'Entity type', value: reco.type },
     { label: 'Registered agent', value: record.agentChoice ? (agentService ? 'Registered agent service' : 'Self (my Virginia address)') : '' },
+    { label: 'Articles approved', value: approved ? fmtDate(approved) : '' },
     { label: 'EIN', value: (record.ein || '').trim() },
     { label: 'State', value: 'Virginia' },
+    { label: 'Annual fee due', value: due ? `${fmtDate(due)} (${fee.amount})` : '' },
   ].filter(r => r.value);
-  const hasRecord = Boolean((record.businessName || '').trim() || record.agentChoice || (record.ein || '').trim());
+  const hasRecord = Boolean((record.businessName || '').trim() || record.agentChoice || (record.ein || '').trim() || approved);
   const [copied, setCopied] = useState(false);
   const copyRecord = () => {
     const text = ['Formation record — Business Launchpad']
@@ -792,6 +871,30 @@ function Summary({ idea, reco, record, onRestart, onReview }) {
           </button>
         </div>
       )}
+
+      <div className="card">
+        <h2 style={{ fontSize: 17 }}>📅 Keep it alive: the annual fee</h2>
+        <p className="sub" style={{ fontSize: 14 }}>
+          Virginia charges a <b style={{ color: 'var(--ink)' }}>{fee.amount} {fee.label}</b> every year, due by the last day of the month your business was formed. Miss it and there’s a $25 penalty — leave it long enough and the state cancels your business.
+        </p>
+        {due ? (
+          <div>
+            <div className="due-box">
+              <div className="k">Next due</div>
+              <div className="v">{fmtDate(due)}</div>
+              <div className="d">{fee.amount} · pay online at cis.scc.virginia.gov · repeats every year</div>
+            </div>
+            <a className="btn btn-primary" href={cal.google} target="_blank" rel="noopener noreferrer">Add to Google Calendar ↗</a>
+            <a className="btn btn-secondary" href={cal.ics} download="virginia-annual-fee.ics">Download for Apple / Outlook (.ics)</a>
+            <div className="field-help" style={{ marginTop: 10, marginBottom: 0 }}>The reminder repeats yearly and pings you two weeks before the due date.</div>
+          </div>
+        ) : (
+          <div>
+            <div className="field-help">Add the date the SCC approved your Articles (Step 3) and we’ll show your exact due date and build a yearly calendar reminder.</div>
+            <button className="btn btn-secondary" onClick={() => onGoToStep(STEPS.findIndex(s => s.id === 'articles'))}>Add my approval date</button>
+          </div>
+        )}
+      </div>
 
       <div className="card">
         <h2 style={{ fontSize: 17 }}>Everything you completed</h2>
@@ -952,6 +1055,7 @@ function App() {
           idea={idea} reco={reco} record={record}
           onRestart={restart}
           onReview={() => { setViewIndex(0); setPhase('roadmap'); }}
+          onGoToStep={(i) => { setViewIndex(i); setPhase('roadmap'); }}
         />
       )}
     </div>
