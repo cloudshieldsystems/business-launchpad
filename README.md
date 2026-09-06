@@ -16,7 +16,8 @@ A step-by-step guide that walks a new business owner through legally forming the
   5. Open a business bank account (document checklist)
   6. Register with Virginia Tax
   7. Check local business license requirements
-- **Final screen:** summary, total spent, "what's next" teasers (bookkeeping, insurance, taxes)
+- **Formation record (v2):** captures the business name (Step 1), registered agent choice (Step 2), and EIN (Step 4); shown on the roadmap banner and the final summary with a one-tap copy button
+- **Final screen:** summary, formation record, total spent (plus the ~$125/yr agent line if you chose a service), "what's next" teasers (bookkeeping, insurance, taxes)
 - Progress saved in localStorage; installable as a PWA (offline-capable, add to home screen)
 
 ## Project layout
@@ -26,12 +27,13 @@ A step-by-step guide that walks a new business owner through legally forming the
 | `docs/` | The deployable site (GitHub Pages serves this) — self-contained `index.html` (React inlined, JSX pre-compiled), PWA manifest, service worker, icons |
 | `index.html` | Dev version — same app as readable JSX, compiled in-browser via Babel standalone (CDN). Edit this one. |
 | `serve.ps1` | Zero-dependency local static server: `powershell -File serve.ps1` then open http://localhost:5173 |
+| `build.mjs` | Rebuilds `docs/index.html` from `index.html` (inlines React, pre-compiles the JSX with Babel) |
 | `save-server.ps1` | Dev helper used to capture compiled JSX and generated icons from the browser |
 
 ## Editing workflow
 
 1. Edit `index.html` (the JSX dev version) and test locally via `serve.ps1`
-2. Rebuild `docs/index.html` from it (inline React + newly compiled JSX — see git history for the assembly script, or ask Claude to do it)
+2. Rebuild `docs/index.html` from it: `npm install --no-save @babel/standalone@7.26.4` (once), then `node build.mjs`. Never hand-edit `docs/index.html`.
 3. Bump the `CACHE` version in `docs/sw.js` so returning visitors get the update
 4. Commit and push — GitHub Pages redeploys automatically
 
