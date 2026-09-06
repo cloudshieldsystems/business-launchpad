@@ -31,14 +31,29 @@ A step-by-step guide that walks a new business owner through legally forming the
 | `index.html` | Dev version — same app as readable JSX, compiled in-browser via Babel standalone (CDN). Edit this one. |
 | `serve.ps1` | Zero-dependency local static server: `powershell -File serve.ps1` then open http://localhost:5173 |
 | `build.mjs` | Rebuilds `docs/index.html` from `index.html` (inlines React, pre-compiles the JSX with Babel) |
+| `tests/` | Browser acceptance suites (Playwright + headless Chromium), one file per feature; `tests/run.mjs` runs them all |
+| `package.json` | Dev tooling only: `npm run build`, `npm test`, `npm run test:live` |
 | `save-server.ps1` | Dev helper used to capture compiled JSX and generated icons from the browser |
 
 ## Editing workflow
 
 1. Edit `index.html` (the JSX dev version) and test locally via `serve.ps1`
-2. Rebuild `docs/index.html` from it: `npm install --no-save @babel/standalone@7.26.4` (once), then `node build.mjs`. Never hand-edit `docs/index.html`.
-3. Bump the `CACHE` version in `docs/sw.js` so returning visitors get the update
-4. Commit and push — GitHub Pages redeploys automatically
+2. Rebuild `docs/index.html` from it: `npm install` (once), then `npm run build`. Never hand-edit `docs/index.html`.
+3. Run `npm test` — 56 browser checks against the rebuilt `docs/` (first time: `npx playwright install chromium`)
+4. Bump the `CACHE` version in `docs/sw.js` so returning visitors get the update
+5. Commit, open a PR, merge — GitHub Pages redeploys automatically
+6. After the deploy finishes, `npm run test:live` runs the same 56 checks against the live site
+
+## Testing
+
+| Command | What it does |
+|---|---|
+| `npm test` | Serves `docs/` locally and runs every `tests/*.test.mjs` in headless Chromium |
+| `npm run test:live` | Same suites against https://cloudshieldsystems.github.io/business-launchpad/ |
+
+Suites cover the whole flow: intake and textarea growth, the business-name gate, agent choice, EIN, Articles date, persistence across reloads, roadmap banner, summary headline, formation record and copy button, agent cost row and footer, annual fee due-date math, Google Calendar and .ics links, the print-to-PDF sheet (hidden on screen, one page in print), Share with its fallbacks, and legacy localStorage states.
+
+Options: `CHROMIUM_PATH=/path/to/chrome` to use a specific browser; `LIVE_URL=` to test a different deployment; `LIVE_VIA_CURL=1` for sandboxes where the browser can't open HTTPS tunnels but curl can.
 
 ## Roadmap
 
